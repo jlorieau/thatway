@@ -28,7 +28,7 @@ class ConfigException(Exception):
 
 
 class ConfigMeta(type):
-    """A metaclass to set up the creation of Config objects and singleton"""
+    """A metaclass to set up the creation of Config object singleton"""
 
     def __call__(cls, root: bool = True, **kwargs):
         # noinspection PyArgumentList
@@ -46,20 +46,20 @@ class Config(metaclass=ConfigMeta):
     is because the Config was designed to be configured on the fly.
     """
 
+    #: Different names for subsections in a dict which could contain config settings
+    section_aliases = ("config", "Config")
+
     #: The root singleton instance
     _instance: t.Optional["Config"] = None
 
     #: The thread lock
-    _lock: Lock = Lock()
-
-    #: Different names for subsections in a dict which could contain config settings
-    section_aliases = ("config", "Config")
+    _thread_lock: Lock = Lock()
 
     def __new__(cls, root: bool = True):
         # Create the singleton instance if it hasn't been created
         if cls._instance is None:
             # Lock the thread
-            with cls._lock:
+            with cls._thread_lock:
                 # Prevent another thread from creating the instance in the
                 # interim
                 if cls._instance is None:
@@ -92,6 +92,19 @@ class Config(metaclass=ConfigMeta):
             self.__dict__[key] = Config(root=False)
             return super().__getattribute__(key)
 
+    def __setattr__(self, key, value):
+        if key in ('_instance',):
+            # Special keys that can have their values replaced
+            super().__setattr__(key, value)
+        elif key not in self.__dict__:
+            # New entries are allowed--but not old entries
+            self.__dict__[key] = value
+        else:
+            # If it already exists, don't allow a rewrite
+            raise ConfigException(f"Can't set Config attribute '{key}' directly with "
+                                  f"value '{value}'--use the Config.load methods.")
+
+
 # dummy placeholder object
 missing = object()
 
@@ -114,16 +127,6 @@ class Parameter:
     def __init__(self, value):
         # Set the default, if specified
         setattr(self, 'value', value)
-
-        # # Place the parameter in the config
-        # keys = self.name.split(self.delim)
-        # nested_config = self._config
-        #
-        # for key in keys[:-1]:
-        #     nested_config = getattr(nested_config, key)
-        #
-        # # Add this parameter to the config
-        # nested_config.__dict__[keys[-1]] = self
 
     def __set_name__(self, owner, name):
         cls_name = owner.__name__
@@ -153,3 +156,7 @@ class Parameter:
             sub_config.__dict__[keys[-1]] = self
 
         return self.value
+
+    def __set__(self, instance, value):
+        raise ConfigException(f"Can't set Parameter attribute with "
+                              f"value '{value}'--use the Config.load methods.")
