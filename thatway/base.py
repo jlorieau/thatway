@@ -5,7 +5,7 @@ import re
 import logging
 
 
-__all__ = ("ConfigException", "Config", "Parameter")
+__all__ = ("ConfigException", "Config", "Parameter", "config")
 
 logger = logging.getLogger(__name__)
 
@@ -96,14 +96,21 @@ class Config(metaclass=ConfigMeta):
         if key in ('_instance',):
             # Special keys that can have their values replaced
             super().__setattr__(key, value)
-        elif key not in self.__dict__:
-            # New entries are allowed--but not old entries
+        elif key not in self.__dict__ and isinstance(value, Parameter):
+            # New entries are allowed as long as they're parameters
             self.__dict__[key] = value
-        else:
+        elif not isinstance(value, Parameter):
+            raise ConfigException(f"Only Parameters can be inserted in the Config")
+        elif key in self.__dict__:
             # If it already exists, don't allow a rewrite
-            raise ConfigException(f"Can't set Config attribute '{key}' directly with "
-                                  f"value '{value}'--use the Config.load methods.")
+            raise ConfigException(f"Entry '{key}' already in the Config--use a "
+                                  f"load method to change its value.")
+        else:
+            raise ConfigException(f"Unable to chance Config")
 
+
+# Config singleton instance
+# config = Config()
 
 # dummy placeholder object
 missing = object()
