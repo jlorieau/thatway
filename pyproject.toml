@@ -30,3 +30,6 @@ dev = [  # For development
     "build",  # Manage package builds
     "black[d]",  # Code formatter
     ]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules --doctest-glob='*.rst'"

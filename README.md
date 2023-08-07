@@ -1,2 +1,0 @@
-# dct
-Decentralized Configuration Tree
