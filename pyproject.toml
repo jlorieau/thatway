@@ -1,5 +1,5 @@
 [project]
-name = "dct"
+name = "thatway"
 authors = [
     {name = "Justin Lorieau"},
 ]
@@ -17,10 +17,10 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["dct"]
+packages = ["thatway"]
 
 [tool.setuptools.dynamic]
-version = {attr = "dct.__version__"}
+version = {attr = "thatway.__version__"}
 
 [project.optional-dependencies]
 

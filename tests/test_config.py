@@ -1,4 +1,4 @@
-from dct import Config, Parameter, ConfigException
+from thatway import Config, Parameter, ConfigException
 
 import pytest
 
