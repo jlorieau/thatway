@@ -38,7 +38,15 @@ Configuration locking
     >>> config.b = Parameter(3)
     >>> config.b
     3
-    >>> config.b = Parameter(5)
+    >>> config.b = Parameter(5)  # oops!
     Traceback (most recent call last):
     ...
     thatway.base.ConfigException: Entry 'b' already in the Config--use a load method to change its value.
+
+Parameter descriptions
+~~~~~~~~~~~~~~~~~~~~~~
+
+    >>> from thatway import Parameter
+    >>> config.c = Parameter(3, desc="The 'c' attribute")
+
+

@@ -117,7 +117,7 @@ class Parameter:
     """A descriptor for a Config parameter.
     """
 
-    __slots__ = ("name", "value", "_config")
+    __slots__ = ("name", "value", "desc")
 
     #: The name of the parameter in the Config
     name: str
@@ -125,12 +125,15 @@ class Parameter:
     #: The value for the parameter
     value: t.Any
 
+    #: The description for this parameter
+    desc: str
+
     #: The delimiter used for splitting keys
     delim: str = "."
 
-    def __init__(self, value):
-        # Set the default, if specified
-        setattr(self, 'value', value)
+    def __init__(self, value, desc=""):
+        self.value = value
+        self.desc = desc
 
     def __set_name__(self, owner, name):
         cls_name = owner.__name__
