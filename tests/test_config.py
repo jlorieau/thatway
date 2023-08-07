@@ -53,28 +53,32 @@ def test_cls_attribute_mutation(config):
 def test_direct_access(config):
     """Test direct access to config"""
     # Try at the root level
-    config.a = "direct access"
+    config.a = Parameter("direct access")
     assert config.a == "direct access"
-    assert "a" in config.__dict__["a"]
+    assert "a" in config.__dict__
 
     # Try at a nested level
-    config.nested.b = "sub level"
+    config.nested.b = Parameter("sub level")
     assert config.nested.b == "sub level"
     assert "b" in config.__dict__["nested"].__dict__
+
+    # Directly setting values without a Parameter is not allowed
+    with pytest.raises(ConfigException):
+        config.c = 3
 
 
 def test_direct_access_mutation(config):
     """Test the mutating of a directly accessed config value"""
-    config.a = "direct access"
-    config.nested.b = "sub level"
+    config.a = Parameter("direct access")
+    config.nested.b = Parameter("sub level")
 
     # Modifying raises an exception
     with pytest.raises(ConfigException):
-        config.a = "new value"
+        config.a = Parameter("new value")
 
     assert config.a == "direct access"
 
     with pytest.raises(ConfigException):
-        config.nested.b = "new value"
+        config.nested.b = Parameter("new value")
 
     assert config.nested.b == "sub level"
