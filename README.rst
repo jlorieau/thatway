@@ -12,9 +12,11 @@ Configure directly
 
     >>> from thatway import config, Parameter
     >>> config.a = Parameter(3)
-    >>> assert config.a == 3
+    >>> config.a
+    3
     >>> config.nested.b = Parameter("nested")
-    >>> assert config.nested.b == "nested"
+    >>> config.nested.b
+    'nested'
 
 Configure object attributes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,7 +27,18 @@ Configure object attributes
     >>> class Obj:
     ...     attribute = Parameter("my value")
     >>> obj = Obj()
-    >>> assert obj.attribute == "my value"
+    >>> obj.attribute
+    'my value'
+
 
 Configuration locking
 ~~~~~~~~~~~~~~~~~~~~~
+
+    >>> from thatway import Parameter
+    >>> config.b = Parameter(3)
+    >>> config.b
+    3
+    >>> config.b = Parameter(5)
+    Traceback (most recent call last):
+    ...
+    thatway.base.ConfigException: Entry 'b' already in the Config--use a load method to change its value.
