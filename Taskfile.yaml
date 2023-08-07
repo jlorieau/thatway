@@ -1,0 +1,91 @@
+# https://taskfile.dev/
+version: '3'
+
+vars:
+  PROJECT_NAME: dct
+  SPHINX_BUILD: .venv/bin/sphinx-build  # run from within virtualenv
+  SPHINX_OPTS: ""
+  SPHINX_SOURCE_DIR: .
+  SPHINX_BUILD_DIR: _build
+
+
+tasks:
+
+  create-env:
+    desc: Create a local virtual environment for development
+    internal: true
+    cmds:
+      - python3 -m venv .venv
+    generates:
+      - .venv
+
+  install:
+    desc: Install the package in development (edit) mode
+    cmds:
+      - python3 -m pip install -e ".[dev]"
+    sources:
+      - pyproject.toml
+
+  setup:
+    desc: Setup the development environment
+    cmds:
+      - task: create-env
+      - task: install
+
+  upload:
+    desc: Upload the package to PyPI
+    cmds:
+      - python3 -m build
+      - twine upload dist/*
+
+  build:
+    desc: Build docs, examples
+    cmds:
+      - task: examples:build
+      - task: docs:build
+
+  examples:run:
+    desc: Run geo with all examples
+    cmds:
+      - "geo examples/*.{toml,yaml}"
+
+  examples:build:
+    desc: Build files from examples/geomancy.yaml
+    cmds:
+      - "yj -yt -i < examples/geomancy.yaml > examples/geomancy.toml"
+    sources:
+      - "examples/geomancy.yaml"
+
+  docs:help:
+    desc: Print the docs building help message
+    dir: docs
+    cmds:
+      - "../{{.SPHINX_BUILD}} -M help {{.SPHINX_SOURCE_DIR}} {{.SPHINX_BUILD_DIR}} {{.SPHINX_OPTS}}"
+
+  docs:build:
+    desc: Build the docs (and examples)
+    dir: docs
+    cmds:
+      - "../{{.SPHINX_BUILD}} -M html {{.SPHINX_SOURCE_DIR}} {{.SPHINX_BUILD_DIR}} -E -a -W {{.SPHINX_OPTS}}"
+    sources:
+      - "**/*.md"
+      - "**/*.rst"
+      - "_static/**"
+      - "conf.py"
+      - "../README.md"
+      - "../geomancy/**/*.py"
+
+  docs:clean:
+    desc: Clean the docs build directories
+    dir: docs
+    cmds:
+      - "../{{.SPHINX_BUILD}} -M clean {{.SPHINX_SOURCE_DIR}} {{.SPHINX_BUILD_DIR}} {{.SPHINX_OPTS}}"
+
+  towncrier:cmds:
+    desc: A refresher of towncrier commands
+    silent: true
+    cmds:
+      - echo "towncrier create -c {msg} {issue}.{type}.md"
+      - echo "towncrier build [--draft] --name {{.PROJECT_NAME}}"
+
+# towncrier create -c "Implement towncrier" 8.docs.md

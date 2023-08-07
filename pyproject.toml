@@ -1,0 +1,32 @@
+[project]
+name = "dct"
+authors = [
+    {name = "Justin Lorieau"},
+]
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Development Status :: 4 - Beta",
+    ]
+dynamic = ["version"]
+dependencies = [
+    "pyyaml>=6.0",  # Parsing YAML for Config
+]
+
+[tool.setuptools]
+packages = ["dct"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dct.__version__"}
+
+[project.optional-dependencies]
+
+dev = [  # For development
+    "pytest>=7.4",  # Testing framework
+    "twine>=4.0",  # Manage package uploads
+    "build",  # Manage package builds
+    "black[d]",  # Code formatter
+    ]
