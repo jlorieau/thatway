@@ -1,0 +1,27 @@
+# https://editorconfig.org/
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+end_of_line = lf
+charset = utf-8
+
+# Docstrings and comments use max_line_length = 79
+[*.py]
+max_line_length = 88
+
+# YAML files are indented by 2 spaces
+[*.{yaml,yml}]
+indent_size = 2
+
+# Markdown files are indented by 2 spaces
+[*.md]
+indent_size = 2
+
+# Restructured text are indented by 4 spaces (not 3)
+[*.rst]
+indent_size = 4
