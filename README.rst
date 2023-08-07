@@ -10,8 +10,7 @@ Configure directly
 
 .. code-block:: python
 
-    >>> from thatway import Config, Parameter
-    >>> config = Config()
+    >>> from thatway import config, Parameter
     >>> config.a = Parameter(3)
     >>> assert config.a == 3
     >>> config.nested.b = Parameter("nested")

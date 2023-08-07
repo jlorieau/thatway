@@ -109,9 +109,6 @@ class Config(metaclass=ConfigMeta):
             raise ConfigException(f"Unable to chance Config")
 
 
-# Config singleton instance
-# config = Config()
-
 # dummy placeholder object
 missing = object()
 
@@ -167,3 +164,4 @@ class Parameter:
     def __set__(self, instance, value):
         raise ConfigException(f"Can't set Parameter attribute with "
                               f"value '{value}'--use the Config.load methods.")
+
