@@ -1,14 +1,6 @@
-from thatway import Config, Setting, ConfigException
+from thatway import Setting, ConfigException
 
 import pytest
-
-
-@pytest.fixture
-def config():
-    """Retrieve and reset the config object"""
-    Config._instance = None
-    config = Config()
-    return config
 
 
 def test_cls_attribute(config):
