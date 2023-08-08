@@ -5,8 +5,8 @@ Decentralized Configuration
 Rules
 -----
 
-Configure directly
-~~~~~~~~~~~~~~~~~~
+1. Configure directly
+~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -18,8 +18,8 @@ Configure directly
     >>> config.nested.b
     'nested'
 
-Configure object attributes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. Configure object attributes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -31,8 +31,8 @@ Configure object attributes
     'my value'
 
 
-Configuration locking
-~~~~~~~~~~~~~~~~~~~~~
+3. Configuration locking
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -43,7 +43,7 @@ Configuration locking
     >>> config.b = Parameter(5)  # oops!
     Traceback (most recent call last):
     ...
-    thatway.base.ConfigException: Entry 'b' already in the Config--use a load method to change its value.
+    thatway.base.ConfigException: Entry 'b' already in the Config--use a Config.update or load method to change its value.
 
 Parameter descriptions
 ~~~~~~~~~~~~~~~~~~~~~~

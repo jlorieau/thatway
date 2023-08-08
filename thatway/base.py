@@ -103,7 +103,7 @@ class Config(metaclass=ConfigMeta):
         elif key in self.__dict__:
             # If it already exists, don't allow a rewrite
             raise ConfigException(f"Entry '{key}' already in the Config--use a "
-                                  f"load method to change its value.")
+                                  f"Config.update or load method to change its value.")
         else:
             raise ConfigException(f"Unable to chance Config")
 
@@ -236,4 +236,5 @@ class Parameter:
 
     def __set__(self, instance, value):
         raise ConfigException(f"Can't set Parameter attribute with "
-                              f"value '{value}'--use the Config.load methods.")
+                              f"value '{value}'--use the Config.update or load "
+                              f"methods.")
