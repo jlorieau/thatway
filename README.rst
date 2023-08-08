@@ -74,8 +74,8 @@ descriptors for classes.
 4. Type Enforcement
 ~~~~~~~~~~~~~~~~~~~
 
-Setting types are checked and maintained with the setting's value type, and
-the ``allowed_types`` optional argument.
+Setting types are checked and maintained with either the setting's value type,
+or the ``allowed_types`` optional argument.
 
 .. code-block:: python
 
@@ -91,9 +91,11 @@ the ``allowed_types`` optional argument.
     ValueError: Could not convert 'my new e value' into any of the following types: [<class 'int'>]
 
 6. Missing Settings
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
-Trying to update a setting that doesn't exist is not possible.
+Trying to update a setting that doesn't exist is not possible. This behavior
+is designed to avoid trying to change a setting but using an incorrect setting
+name and location.
 
 .. code-block:: python
 
