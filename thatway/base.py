@@ -126,6 +126,9 @@ class Config(metaclass=ConfigMeta):
             Raised when the updates include a change that would replace a
             sub-config (subsection) that includes parameters with a single
             parameter.
+        ValueError
+            If the update dict contains a  value that has a different
+            type then the corresponding parameter's value
         """
         for k, v in updates.items():
             try:
@@ -149,8 +152,11 @@ class Config(metaclass=ConfigMeta):
                     f"Cannot replace config section '{k}' with a parameter '{v}'"
                 )
             elif isinstance(current_value, Parameter):
-                # Replace the parameter's value
-                current_value.value = v
+                # Get the parameter value's type
+                value_type = type(current_value.value)
+
+                # Replace the parameter's value, trying to coerce the type
+                current_value.value = value_type(v)
             else:
                 raise ConfigException("Parameter not in Config")
 

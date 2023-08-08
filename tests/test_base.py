@@ -97,11 +97,10 @@ def test_config_update(config):
 
 
 
-
 def test_config_update_type_matching(config):
     """Test the config.update method with mismatched types"""
     config.a = Parameter(1)
     config.nested.b = Parameter(2)
 
-    with pytest.raises(ConfigException):
+    with pytest.raises(ValueError):
         config.update({'a': 'new value', 'nested': {'b': "new nested b"}})
