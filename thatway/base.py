@@ -267,10 +267,13 @@ class Config(metaclass=ConfigMeta):
     # yaml methods
 
     @staticmethod
-    def _to_yaml(value) -> str:
+    def _to_yaml(value, level, indent) -> str:
         """Convert a value to a string formatted for yaml"""
+        spacer = " " * indent * level
         if isinstance(value, bool):
             return str(value).lower()
+        elif isinstance(value, list) or isinstance(value, tuple):
+            return "\n" + "\n".join(f"{spacer}- {i}" for i in value)
         else:
             return str(value)
 
@@ -306,7 +309,7 @@ class Config(metaclass=ConfigMeta):
             if isinstance(v, Setting):
                 # Format the setting value and, optionally, its description
                 comment = f"  # {v.desc}" if v.desc else ""
-                value = self._to_yaml(v.value)
+                value = self._to_yaml(v.value, level=level + 1, indent=indent)
                 string += f"{spacer}{k}: {value}{comment}\n"
 
             elif isinstance(v, Config):

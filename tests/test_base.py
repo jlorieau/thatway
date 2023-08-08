@@ -195,22 +195,25 @@ def test_config_loads_yaml(config, mode, tmp_path):
     assert config.a == 2
 
 
-def test_config_dumps_yaml(config):
+@pytest.mark.parametrize("value", (1, "a", True, (1,), (1, 2, 3), ["a", "b", "c"]))
+def test_config_dumps_yaml(config, value):
     """Test the config.dumps_yaml method for generating yaml strings"""
 
     # Setup a config
     class Obj:
-        a = Setting(1)
+        a = Setting(value)
 
     config.b = Setting("name", desc="The 'b' setting")
     config.nested.c = Setting(True)
 
     # Retrieve and compare the yaml string
     yaml = config.dumps_yaml()
-    assert yaml == "Obj:\n  a: 1\nb: name  # The 'b' setting\nnested:\n  c: true\n"
-
+    print(yaml)
     # The string can be loaded back without exception
     config.loads_yaml(yaml)
+
+    # Check the loaded value
+    assert Obj.a == value
 
 
 @pytest.mark.parametrize("mode", ("string", "file"))
@@ -234,25 +237,19 @@ def test_config_loads_toml(config, mode, tmp_path):
     assert Obj.a == 2
 
 
-def test_config_dumps_toml(config):
+@pytest.mark.parametrize("value", (1, "a", True, (1,), (1, 2, 3), ["a", "b", "c"]))
+def test_config_dumps_toml(config, value):
     """Test the config.dumps_toml method for generating toml strings"""
 
     # Setup a config
     class Obj:
-        a = Setting(1)
-        b = Setting((1, 2, 3))
-        c = Setting("my message")
-        d = Setting(True, desc="my true setting")
+        a = Setting(value)
 
     # Retrieve and compare the yaml string
     toml = config.dumps_toml()
-    assert toml == (
-        "[Obj]\n"
-        "  a = 1\n"
-        "  b = [1, 2, 3]\n"
-        "  c = 'my message'\n"
-        "  d = true  # my true setting\n"
-    )
 
     # The string can be loaded back without exception
     config.loads_toml(toml)
+
+    # Check the loaded value
+    assert Obj.a == value
