@@ -89,15 +89,15 @@ or the ``allowed_types`` optional argument.
 .. code-block:: python
 
     >>> from thatway import Setting
-    >>> config.d = Setting(5, allowed_types=(int, str))
+    >>> config.c = Setting(5, allowed_types=(int, str))
+    >>> config.update({'c': 'my new c value'})
+    >>> config.c
+    'my new c value'
+    >>> config.d = Setting(6)
     >>> config.update({'d': 'my new d value'})
-    >>> config.d
-    'my new d value'
-    >>> config.e = Setting(6)
-    >>> config.update({'e': 'my new e value'})
     Traceback (most recent call last):
     ...
-    ValueError: Could not convert 'my new e value' into any of the following types: [<class 'int'>]
+    ValueError: Could not convert 'my new d value' into any of the following types: [<class 'int'>]
 
 6. Missing Settings
 ~~~~~~~~~~~~~~~~~~~
@@ -109,10 +109,10 @@ name and location.
 .. code-block:: python
 
     >>> from thatway import Setting
-    >>> config.update({'f': 'unassigned'})  # 'f' doesn't exist in config
+    >>> config.update({'e': 'unassigned'})  # 'f' doesn't exist in config
     Traceback (most recent call last):
     ...
-    KeyError: "Tried assigning setting with name 'f' which does not exist in the Config"
+    KeyError: "Tried assigning setting with name 'e' which does not exist in the Config"
 
 Features
 --------
@@ -125,4 +125,22 @@ Settings can include descriptions.
 .. code-block:: python
 
     >>> from thatway import Setting
-    >>> config.c = Setting(4, desc="The 'c' attribute")
+    >>> config.e = Setting(4, desc="The 'e' attribute")
+
+2. Yaml processing
+~~~~~~~~~~~~~~~~~~
+
+Settings can be dumped in `yaml <https://yaml.org>`_.
+
+``config.dumps_yaml()``
+
+.. code-block:: yaml
+
+    Obj:
+      a: 1
+    b: name  # The 'b' setting
+    nested:
+      c: true
+
+And `yaml <https://yaml.org>`_ strings or files can be loaded with
+``config.loads_yaml(string)`` and ``config.load_yaml(filepath)``, respectively.
