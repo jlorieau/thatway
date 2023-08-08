@@ -31,5 +31,8 @@ dev = [  # For development
     "black[d]",  # Code formatter
     ]
 
+[project.urls]
+Homepage = "https://github.com/jlorieau/thatway"
+
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --doctest-glob='*.rst'"
