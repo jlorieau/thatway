@@ -5,11 +5,7 @@ from collections.abc import Mapping
 import logging
 
 import yaml
-
-try:
-    from yaml import CLoader as Loader, CDumper as Dumper
-except ImportError:
-    from yaml import Loader, Dumper
+import tomllib
 
 __all__ = ("ConfigException", "Config", "Setting")
 
@@ -280,13 +276,13 @@ class Config(metaclass=ConfigMeta):
 
     def loads_yaml(self, string: str) -> None:
         """Load settings from a yaml string into the config"""
-        d = yaml.load(string, Loader=Loader)
+        d = yaml.load(string, Loader=yaml.Loader)
         self.update(d)
 
     def load_yaml(self, filepath: str) -> None:
         """Load settings from a yaml file into the config"""
         with open(filepath, "r") as f:
-            d = yaml.load(f, Loader=Loader)
+            d = yaml.load(f, Loader=yaml.Loader)
         self.update(d)
 
     def dumps_yaml(self, level: int = 0, indent: int = 2) -> str:
@@ -322,3 +318,16 @@ class Config(metaclass=ConfigMeta):
                 # Only Config and Setting objects should be in here
                 raise ConfigException(f"Unknown config type for entry '{v}'")
         return string
+
+    # toml methods
+
+    def loads_toml(self, string: str) -> None:
+        """Load settings from a toml string into the config"""
+        d = tomllib.loads(string)
+        self.update(d)
+
+    def load_toml(self, filepath: str) -> None:
+        """Load settings from a toml file into the config"""
+        with open(filepath, "rb") as f:
+            d = tomllib.load(f)
+        self.update(d)

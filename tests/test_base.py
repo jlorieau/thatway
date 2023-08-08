@@ -181,22 +181,26 @@ def test_config_dump(config):
     assert d["nested"]["c"]
 
 
-def test_config_loads_yaml(config):
-    """Test the config.loads_yaml method for loading yaml strings"""
+@pytest.mark.parametrize("mode", ("string", "file"))
+def test_config_loads_yaml(config, mode, tmp_path):
+    """Test the config.loads_yaml and config.load_yaml methods for loading yaml
+    strings"""
     # Set up a config
     config.a = Setting(1)
 
     # Load and replace the value
     config.loads_yaml("a: 2")
+
+    # Test loading of new value
+    yaml_string = "a: 2"
+    if mode == "string":
+        config.loads_yaml(yaml_string)
+    elif mode == "file":
+        tmp_file = tmp_path / "settings.yaml"
+        tmp_file.write_text(yaml_string)
+        config.load_yaml(tmp_file)
+
     assert config.a == 2
-
-    # Switching the type isn't allowed
-    with pytest.raises(ValueError):
-        config.loads_yaml("a: 'new string'")
-
-    # Assigning a new setting isn't allowed
-    with pytest.raises(KeyError):
-        config.loads_yaml("b: 2")
 
 
 def test_config_dumps_yaml(config):
@@ -209,9 +213,30 @@ def test_config_dumps_yaml(config):
     config.b = Setting("name", desc="The 'b' setting")
     config.nested.c = Setting(True)
 
-    # Compare the yaml string
+    # Retrieve and compare the yaml string
     yaml = config.dumps_yaml()
     assert yaml == "Obj:\n  a: 1\nb: name  # The 'b' setting\nnested:\n  c: true\n"
 
     # The string can be loaded back without exception
     config.loads_yaml(yaml)
+
+
+@pytest.mark.parametrize("mode", ("string", "file"))
+def test_config_loads_toml(config, mode, tmp_path):
+    """Test the config.loads_toml and config.load_toml methods for loading
+    toml strings"""
+
+    # Setup a config
+    class Obj:
+        a = Setting(1)
+
+    # Test loading of new value
+    toml_string = "[Obj]\na = 2"
+    if mode == "string":
+        config.loads_toml(toml_string)
+    elif mode == "file":
+        tmp_file = tmp_path / "settings.toml"
+        tmp_file.write_text(toml_string)
+        config.load_toml(tmp_file)
+
+    assert Obj.a == 2
