@@ -268,6 +268,16 @@ class Config(metaclass=ConfigMeta):
                 raise ConfigException(f"Unknown config type for entry '{v}'")
         return d
 
+    # yaml methods
+
+    @staticmethod
+    def _to_yaml(value) -> str:
+        """Convert a value to a string formatted for yaml"""
+        if isinstance(value, bool):
+            return str(value).lower()
+        else:
+            return str(value)
+
     def loads_yaml(self, string: str) -> None:
         """Load settings from a yaml string into the config"""
         d = yaml.load(string, Loader=Loader)
@@ -279,6 +289,36 @@ class Config(metaclass=ConfigMeta):
             d = yaml.load(f, Loader=Loader)
         self.update(d)
 
-    def dumps_yaml(self) -> str:
-        """Dump settings from the config into a yaml string"""
-        return yaml.dump(self.dump(), Dumper=Dumper)
+    def dumps_yaml(self, level: int = 0, indent: int = 2) -> str:
+        """Dump settings from the config into a yaml string
+
+        Parameters
+        ----------
+        level
+            The current level of the config for nested configs
+        indent
+            The number of spaces to indent each level
+
+        Returns
+        -------
+        yaml
+            A yaml-formatted string
+        """
+        string = ""
+        for k, v in self.__dict__.items():
+            spacer = " " * indent * level
+            if isinstance(v, Setting):
+                # Format the setting value and, optionally, its description
+                comment = f"  # {v.desc}" if v.desc else ""
+                value = self._to_yaml(v.value)
+                string += f"{spacer}{k}: {value}{comment}\n"
+
+            elif isinstance(v, Config):
+                # Print the config as a new section then use the config's corresponding
+                # dump method to get its values
+                string += f"{spacer}{k}:\n"
+                string += v.dumps_yaml(level=level + 1, indent=indent)  # this method
+            else:
+                # Only Config and Setting objects should be in here
+                raise ConfigException(f"Unknown config type for entry '{v}'")
+        return string

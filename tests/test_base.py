@@ -206,9 +206,12 @@ def test_config_dumps_yaml(config):
     class Obj:
         a = Setting(1)
 
-    config.b = Setting("name")
+    config.b = Setting("name", desc="The 'b' setting")
     config.nested.c = Setting(True)
 
     # Compare the yaml string
     yaml = config.dumps_yaml()
-    assert yaml == "Obj:\n  a: 1\nb: name\nnested:\n  c: true\n"
+    assert yaml == "Obj:\n  a: 1\nb: name  # The 'b' setting\nnested:\n  c: true\n"
+
+    # The string can be loaded back without exception
+    config.loads_yaml(yaml)
