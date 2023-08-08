@@ -1,5 +1,13 @@
 ThatWay
 =======
+.. image:: https://img.shields.io/pypi/v/thatway.svg
+    :target: https://pypi.org/project/thatway/
+    :alt: PyPI version
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+    :alt: Black formatted
+
 Thatway is a simple, decentralized configuration manager.
 
 Place your configuration settings throughout your application--not in a
