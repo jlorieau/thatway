@@ -1,11 +1,12 @@
 """An instance-wide configuration"""
 import typing as t
 from threading import Lock
+from collections.abc import Mapping
 import re
 import logging
 
 
-__all__ = ("ConfigException", "Config", "Parameter", "config")
+__all__ = ("ConfigException", "Config", "Parameter")
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,51 @@ class Config(metaclass=ConfigMeta):
                                   f"load method to change its value.")
         else:
             raise ConfigException(f"Unable to chance Config")
+
+    def __contains__(self, item):
+        return item in self.__dict__
+
+    def update(self, updates: Mapping) -> None:
+        """Recursively update config with values from a dict.
+
+        Parameters
+        ----------
+        updates
+            The dict with values to recursively update
+
+        Raises
+        ------
+        ConfigException
+            Raised when the updates include a change that would replace a
+            sub-config (subsection) that includes parameters with a single
+            parameter.
+        """
+        for k, v in updates.items():
+            try:
+                current_value = self.__dict__[k]
+            except KeyError:
+                # If the key doesn't exist in the config, then this is not a parameter
+                # used in the application. Skip it.
+                continue
+
+            if isinstance(v, Mapping):
+                # Use the corresponding update function. ex: dict.update
+                current_value.update(v)
+            elif isinstance(v, Config):
+                # If it's a sub-config upget, use its corresponding update (this method)
+                current_value.update(v.__dict__)
+            elif isinstance(current_value, Config) and len(current_value.__dict__) > 0:
+                # In this case, the update value 'v' is a simple value but the
+                # current_value is a sub-config with items in it. Overwriting
+                # This sub-config is not allowd
+                raise ConfigException(
+                    f"Cannot replace config section '{k}' with a parameter '{v}'"
+                )
+            elif isinstance(current_value, Parameter):
+                # Replace the parameter's value
+                current_value.value = v
+            else:
+                raise ConfigException("Parameter not in Config")
 
 
 # dummy placeholder object

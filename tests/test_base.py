@@ -82,3 +82,26 @@ def test_direct_access_mutation(config):
         config.nested.b = Parameter("new value")
 
     assert config.nested.b == "sub level"
+
+
+def test_config_update(config):
+    """Test the config.update method"""
+    config.a = Parameter(1)
+    config.nested.b = Parameter(2)
+
+    # Updating allows overwrites
+    config.update({'a': 3, 'nested': {'b': 4}})
+
+    assert config.a == 3
+    assert config.nested.b == 4
+
+
+
+
+def test_config_update_type_matching(config):
+    """Test the config.update method with mismatched types"""
+    config.a = Parameter(1)
+    config.nested.b = Parameter(2)
+
+    with pytest.raises(ConfigException):
+        config.update({'a': 'new value', 'nested': {'b': "new nested b"}})
