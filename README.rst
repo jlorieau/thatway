@@ -34,6 +34,8 @@ Configure object attributes
 Configuration locking
 ~~~~~~~~~~~~~~~~~~~~~
 
+.. code-block:: python
+
     >>> from thatway import Parameter
     >>> config.b = Parameter(3)
     >>> config.b
@@ -46,7 +48,7 @@ Configuration locking
 Parameter descriptions
 ~~~~~~~~~~~~~~~~~~~~~~
 
+.. code-block:: python
+
     >>> from thatway import Parameter
     >>> config.c = Parameter(3, desc="The 'c' attribute")
-
-
