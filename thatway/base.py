@@ -124,6 +124,8 @@ class Config(metaclass=ConfigMeta):
             Raised when the updates include a change that would replace a
             sub-config (subsection) that includes parameters with a single
             parameter.
+        KeyError
+            If a key as specified that doesn't exist in this config
         ValueError
             If the update dict contains a  value that has a different
             type then the corresponding parameter's value
@@ -131,10 +133,9 @@ class Config(metaclass=ConfigMeta):
         for k, v in updates.items():
             try:
                 current_value = self.__dict__[k]
-            except KeyError:
-                # If the key doesn't exist in the config, then this is not a parameter
-                # used in the application. Skip it.
-                continue
+            except KeyError as exc:
+                raise KeyError(f"Tried assigning parameter with name '{k}' which does "
+                               f"not exist in the Config")
 
             if isinstance(v, Mapping):
                 # Use the corresponding update function. ex: dict.update

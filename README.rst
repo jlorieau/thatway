@@ -2,8 +2,8 @@ ThatWay
 =======
 Decentralized Configuration
 
-Methods
--------
+Rules
+-----
 
 Configure directly
 ~~~~~~~~~~~~~~~~~~
@@ -69,3 +69,13 @@ Type Enforcement
     ...
     ValueError: Could not convert 'my new e value' into any of the following types: [<class 'int'>]
 
+Missing Parameters
+~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    >>> from thatway import Parameter
+    >>> config.update({'f': 'unassigned'})  # 'f' doesn't exist in config
+    Traceback (most recent call last):
+    ...
+    KeyError: "Tried assigning parameter with name 'f' which does not exist in the Config"
