@@ -321,6 +321,18 @@ class Config(metaclass=ConfigMeta):
 
     # toml methods
 
+    @staticmethod
+    def _to_toml(value) -> str:
+        """Convert a value to a string formatted for yaml"""
+        if isinstance(value, bool):
+            return str(value).lower()
+        elif isinstance(value, str):
+            return f"'{value}'"
+        elif isinstance(value, list) or isinstance(value, tuple):
+            return f"[{', '.join(map(Config._to_toml, value))}]"
+        else:
+            return str(value)
+
     def loads_toml(self, string: str) -> None:
         """Load settings from a toml string into the config"""
         d = tomllib.loads(string)
@@ -331,3 +343,37 @@ class Config(metaclass=ConfigMeta):
         with open(filepath, "rb") as f:
             d = tomllib.load(f)
         self.update(d)
+
+    def dumps_toml(self, level: int = 0, indent: int = 2) -> str:
+        """Dump settings from the config into a toml string
+
+        Parameters
+        ----------
+        level
+            The current level of the config for nested configs
+        indent
+            The number of spaces to indent each level
+
+        Returns
+        -------
+        yaml
+            A yaml-formatted string
+        """
+        string = ""
+        for k, v in self.__dict__.items():
+            spacer = " " * indent * level
+            if isinstance(v, Setting):
+                # Format the setting value and, optionally, its description
+                comment = f"  # {v.desc}" if v.desc else ""
+                value = self._to_toml(v.value)
+                string += f"{spacer}{k} = {value}{comment}\n"
+
+            elif isinstance(v, Config):
+                # Print the config as a new section then use the config's corresponding
+                # dump method to get its values
+                string += f"{spacer}[{k}]\n"
+                string += v.dumps_toml(level=level + 1, indent=indent)  # this method
+            else:
+                # Only Config and Setting objects should be in here
+                raise ConfigException(f"Unknown config type for entry '{v}'")
+        return string

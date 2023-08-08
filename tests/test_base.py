@@ -232,3 +232,27 @@ def test_config_loads_toml(config, mode, tmp_path):
         config.load_toml(tmp_file)
 
     assert Obj.a == 2
+
+
+def test_config_dumps_toml(config):
+    """Test the config.dumps_toml method for generating toml strings"""
+
+    # Setup a config
+    class Obj:
+        a = Setting(1)
+        b = Setting((1, 2, 3))
+        c = Setting("my message")
+        d = Setting(True, desc="my true setting")
+
+    # Retrieve and compare the yaml string
+    toml = config.dumps_toml()
+    assert toml == (
+        "[Obj]\n"
+        "  a = 1\n"
+        "  b = [1, 2, 3]\n"
+        "  c = 'my message'\n"
+        "  d = true  # my true setting\n"
+    )
+
+    # The string can be loaded back without exception
+    config.loads_toml(toml)

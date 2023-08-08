@@ -215,3 +215,21 @@ Settings can be dumped in `yaml <https://yaml.org>`_.
 
 And `yaml <https://yaml.org>`_ strings or files can be loaded with
 ``config.loads_yaml(string)`` and ``config.load_yaml(filepath)``, respectively.
+
+3. Toml processing
+~~~~~~~~~~~~~~~~~~
+
+Settings can be dumped in `toml <https://toml.io/en/>`_.
+
+``config.dumps_toml()``
+
+.. code-block:: toml
+
+    [Obj]
+      a = 1
+    b = name  # The 'b' setting
+    [nested]
+      c = true
+
+And `toml <https://toml.io/en/>`_ strings or files can be loaded with
+``config.loads_toml(string)`` and ``config.load_toml(filepath)``, respectively.
