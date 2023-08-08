@@ -92,7 +92,7 @@ class Config(metaclass=ConfigMeta):
             return super().__getattribute__(key)
 
     def __setattr__(self, key, value):
-        if key in ('_instance',):
+        if key in ("_instance",):
             # Special keys that can have their values replaced
             super().__setattr__(key, value)
         elif key not in self.__dict__ and isinstance(value, Parameter):
@@ -102,8 +102,10 @@ class Config(metaclass=ConfigMeta):
             raise ConfigException(f"Only Parameters can be inserted in the Config")
         elif key in self.__dict__:
             # If it already exists, don't allow a rewrite
-            raise ConfigException(f"Entry '{key}' already in the Config--use a "
-                                  f"Config.update or load method to change its value.")
+            raise ConfigException(
+                f"Entry '{key}' already in the Config--use a "
+                f"Config.update or load method to change its value."
+            )
         else:
             raise ConfigException(f"Unable to chance Config")
 
@@ -134,8 +136,10 @@ class Config(metaclass=ConfigMeta):
             try:
                 current_value = self.__dict__[k]
             except KeyError:
-                raise KeyError(f"Tried assigning parameter with name '{k}' which does "
-                               f"not exist in the Config")
+                raise KeyError(
+                    f"Tried assigning parameter with name '{k}' which does "
+                    f"not exist in the Config"
+                )
 
             if isinstance(v, Mapping):
                 # Use the corresponding update function. ex: dict.update
@@ -168,8 +172,10 @@ class Config(metaclass=ConfigMeta):
                         continue
 
                 if not found_type:
-                    raise ValueError(f"Could not convert '{v}' into any of the "
-                                     f"following types: {types}")
+                    raise ValueError(
+                        f"Could not convert '{v}' into any of the "
+                        f"following types: {types}"
+                    )
 
             else:
                 raise ConfigException("Parameter not in Config")
@@ -180,13 +186,9 @@ missing = object()
 
 
 class Parameter:
-    """A descriptor for a Config parameter.
-    """
+    """A descriptor for a Config parameter."""
 
-    __slots__ = ("name", "value", "desc", "allowed_types")
-
-    #: The name of the parameter in the Config
-    name: str
+    __slots__ = ("value", "desc", "allowed_types")
 
     #: The value for the parameter
     value: t.Any
@@ -200,42 +202,65 @@ class Parameter:
     #: The delimiter used for splitting keys
     delim: str = "."
 
-    def __init__(self, value: t.Any, desc: str = "",
-                 allowed_types: t.Optional[t.Tuple[t.Any, ...]] = None):
+    def __init__(
+        self,
+        value: t.Any,
+        desc: str = "",
+        allowed_types: t.Optional[t.Tuple[t.Any, ...]] = None,
+    ):
         self.value = value
         self.desc = desc
         self.allowed_types = allowed_types
 
     def __set_name__(self, owner, name):
         cls_name = owner.__name__
-        name = f"{cls_name}.{name}"
-        validate(name)
-        self.name = name
+        location = f"{cls_name}.{name}"
+        self._config_insert(location)
 
-    # def __repr__(self):
-    #     value = getattr(self._config, self.key)
-    #     return f"Param({self.key}={value})"
+    def __repr__(self):
+        return f"Param({self.value})"
 
     def __get__(self, instance, owner):
-        """Get the parameter value
-
-        Notes
-        -----
-        - This method also inserts the parameter in the config. This means that the
-          parameter is only registered on the config when it is accessed/used. Unused
-          parameters are not registered in the config
-        """
-        # If this parameter doesn't exist in the config, insert it
-        keys = self.name.split(self.delim)
-        sub_config = Config()
-        for key in keys[:-1]:
-            sub_config = getattr(sub_config, key)
-        if keys[-1] not in sub_config.__dict__:
-            sub_config.__dict__[keys[-1]] = self
-
+        """Get the parameter value"""
         return self.value
 
     def __set__(self, instance, value):
-        raise ConfigException(f"Can't set Parameter attribute with "
-                              f"value '{value}'--use the Config.update or load "
-                              f"methods.")
+        raise ConfigException(
+            f"Can't set Parameter attribute with "
+            f"value '{value}'--use the Config.update or load "
+            f"methods."
+        )
+
+    def _config_insert(self, location: str):
+        """Insert this parameter in the config at the given location.
+
+        Parameters
+        ----------
+        location
+            The location of the parameter. e.g. 'Obj.a'
+
+        Raises
+        ------
+        ConfigException
+            Raised if trying to insert this parameter by something else already
+            exists at that location in the config.
+        """
+        keys = location.split(self.delim)
+
+        # Got through each key to get sub configs deeper in the nested tree
+        sub_config = Config()
+        for key in keys[:-1]:
+            sub_config = getattr(sub_config, key)
+
+        # The last key is where this parameter should be inserted.
+        last_key = keys[-1]
+        if last_key not in sub_config.__dict__:
+            # If it's not inserted already, place it in there.
+            sub_config.__dict__[last_key] = self
+        elif id(sub_config.__dict__[last_key]) != id(self):
+            # Oops, another object's in that place! There's a parameter collision
+            other_value = sub_config.__dict__[last_key]
+            raise ConfigException(
+                f"Cannot insert '{self}' at '{location}'. The '{other_value}' "
+                f"already exists there."
+            )
