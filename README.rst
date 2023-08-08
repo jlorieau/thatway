@@ -60,6 +60,10 @@ the config is updated.
     >>> config.b
     5
 
+The one exception is that parameters defined on a class can be replaced on the
+class itself--not a class instance. This is because parameters act as
+descriptors for classes.
+
 4. Type Enforcement
 ~~~~~~~~~~~~~~~~~~~
 
