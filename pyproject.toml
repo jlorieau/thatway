@@ -3,7 +3,7 @@ name = "thatway"
 authors = [
     {name = "Justin Lorieau"},
 ]
-readme = "README.md"
+readme = "README.rst"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
