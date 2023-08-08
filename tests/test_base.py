@@ -116,6 +116,13 @@ def test_config_update_type_matching(config):
     assert config.nested.b == "my new string"
 
 
+def test_config_update_missing(config):
+    """Test the config.update method for a missing setting, which shouldn't be
+    inserted"""
+    with pytest.raises(KeyError):
+        config.update({"new_value": "2"})
+
+
 def test_setting_overwrite(config):
     """Test that settings cannot be overwritten in the config"""
 
