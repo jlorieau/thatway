@@ -16,28 +16,28 @@ manager.
 1. Configure directly
 ~~~~~~~~~~~~~~~~~~~~~
 
-Parameters can be set directly on the config object.
+Settings can be set directly on the config object.
 
 .. code-block:: python
 
-    >>> from thatway import config, Parameter
-    >>> config.a = Parameter(3)
+    >>> from thatway import config, Setting
+    >>> config.a = Setting(3)
     >>> config.a
     3
-    >>> config.nested.b = Parameter("nested")
+    >>> config.nested.b = Setting("nested")
     >>> config.nested.b
     'nested'
 
 2. Configure object attributes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Parameters can be set as object attributes.
+Settings can be set as object attributes.
 
 .. code-block:: python
 
-    >>> from thatway import Parameter
+    >>> from thatway import Setting
     >>> class Obj:
-    ...     attribute = Parameter("my value")
+    ...     attribute = Setting("my value")
     >>> obj = Obj()
     >>> obj.attribute
     'my value'
@@ -46,72 +46,72 @@ Parameters can be set as object attributes.
 3. Configuration locking
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Parameters cannot be accidentally modified. Once they're set, they're set until
+Settings cannot be accidentally modified. Once they're set, they're set until
 the config's ``update`` or ``load`` methods are used.
 
 .. code-block:: python
 
-    >>> from thatway import Parameter
-    >>> config.b = Parameter(3)
+    >>> from thatway import Setting
+    >>> config.b = Setting(3)
     >>> config.b
     3
-    >>> config.b = Parameter(5)  # oops!
+    >>> config.b = Setting(5)  # oops!
     Traceback (most recent call last):
     ...
     thatway.base.ConfigException: Entry 'b' already in the Config--use a Config.update or load method to change its value.
     >>> config.b = 5  # oops!
     Traceback (most recent call last):
     ...
-    thatway.base.ConfigException: Only Parameters can be inserted in the Config
+    thatway.base.ConfigException: Only Settings can be inserted in the Config
     >>> config.update({'b': 5})
     >>> config.b
     5
 
-The one exception is that parameters defined on a class can be replaced on the
-class itself--not a class instance. This is because parameters act as
+The one exception is that settings defined on a class can be replaced on the
+class itself--not a class instance. This is because settings act as
 descriptors for classes.
 
 4. Type Enforcement
 ~~~~~~~~~~~~~~~~~~~
 
-Parameter types are checked and maintained with the parameter's value type, and
+Setting types are checked and maintained with the setting's value type, and
 the ``allowed_types`` optional argument.
 
 .. code-block:: python
 
-    >>> from thatway import Parameter
-    >>> config.d = Parameter(5, allowed_types=(int, str))
+    >>> from thatway import Setting
+    >>> config.d = Setting(5, allowed_types=(int, str))
     >>> config.update({'d': 'my new d value'})
     >>> config.d
     'my new d value'
-    >>> config.e = Parameter(6)
+    >>> config.e = Setting(6)
     >>> config.update({'e': 'my new e value'})
     Traceback (most recent call last):
     ...
     ValueError: Could not convert 'my new e value' into any of the following types: [<class 'int'>]
 
-6. Missing Parameters
+6. Missing Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
-Trying to update a parameter that doesn't exist is not possible.
+Trying to update a setting that doesn't exist is not possible.
 
 .. code-block:: python
 
-    >>> from thatway import Parameter
+    >>> from thatway import Setting
     >>> config.update({'f': 'unassigned'})  # 'f' doesn't exist in config
     Traceback (most recent call last):
     ...
-    KeyError: "Tried assigning parameter with name 'f' which does not exist in the Config"
+    KeyError: "Tried assigning setting with name 'f' which does not exist in the Config"
 
 Features
 --------
 
-1. Parameter descriptions
+1. Setting descriptions
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Parameters can include descriptions.
+Settings can include descriptions.
 
 .. code-block:: python
 
-    >>> from thatway import Parameter
-    >>> config.c = Parameter(4, desc="The 'c' attribute")
+    >>> from thatway import Setting
+    >>> config.c = Setting(4, desc="The 'c' attribute")

@@ -1,4 +1,4 @@
-from thatway import Config, Parameter, ConfigException
+from thatway import Config, Setting, ConfigException
 
 import pytest
 
@@ -15,7 +15,7 @@ def test_cls_attribute(config):
     """Test the setting of a class attribute"""
 
     class Obj:
-        a = Parameter(value=3)
+        a = Setting(value=3)
 
     obj = Obj()
 
@@ -24,16 +24,16 @@ def test_cls_attribute(config):
 
     assert config.Obj.a == 3
 
-    # Check the parameter object
+    # Check the setting object
     param_obj = config.__dict__["Obj"].__dict__["a"]
-    assert isinstance(param_obj, Parameter)
+    assert isinstance(param_obj, Setting)
 
 
 def test_cls_attribute_mutation(config):
     """Test the mutating of a class attribute"""
 
     class Obj:
-        a = Parameter(value=3)
+        a = Setting(value=3)
 
     obj = Obj()
 
@@ -55,45 +55,45 @@ def test_cls_attribute_mutation(config):
 def test_direct_access(config):
     """Test direct access to config"""
     # Try at the root level
-    config.a = Parameter("direct access")
+    config.a = Setting("direct access")
     assert config.a == "direct access"
     assert "a" in config.__dict__
 
     # Try at a nested level
-    config.nested.b = Parameter("sub level")
+    config.nested.b = Setting("sub level")
     assert config.nested.b == "sub level"
     assert "b" in config.__dict__["nested"].__dict__
 
-    # Directly setting values without a Parameter is not allowed
+    # Directly setting values without a Setting is not allowed
     with pytest.raises(ConfigException):
         config.c = 3
 
-    # Check the parameter object
+    # Check the setting object
     param_obj = config.__dict__["a"]
-    assert isinstance(param_obj, Parameter)
+    assert isinstance(param_obj, Setting)
 
 
 def test_direct_access_mutation(config):
     """Test the mutating of a directly accessed config value"""
-    config.a = Parameter("direct access")
-    config.nested.b = Parameter("sub level")
+    config.a = Setting("direct access")
+    config.nested.b = Setting("sub level")
 
     # Modifying raises an exception
     with pytest.raises(ConfigException):
-        config.a = Parameter("new value")
+        config.a = Setting("new value")
 
     assert config.a == "direct access"
 
     with pytest.raises(ConfigException):
-        config.nested.b = Parameter("new value")
+        config.nested.b = Setting("new value")
 
     assert config.nested.b == "sub level"
 
 
 def test_config_update(config):
     """Test the config.update method"""
-    config.a = Parameter(1)
-    config.nested.b = Parameter(2)
+    config.a = Setting(1)
+    config.nested.b = Setting(2)
 
     # Updating allows overwrites
     config.update({"a": 3, "nested": {"b": 4}})
@@ -104,8 +104,8 @@ def test_config_update(config):
 
 def test_config_update_type_matching(config):
     """Test the config.update method with mismatched types"""
-    config.a = Parameter(1)
-    config.nested.b = Parameter(2, allowed_types=(int, str))
+    config.a = Setting(1)
+    config.nested.b = Setting(2, allowed_types=(int, str))
 
     # Can't change the value of 'a'
     with pytest.raises(ValueError):
@@ -116,20 +116,20 @@ def test_config_update_type_matching(config):
     assert config.nested.b == "my new string"
 
 
-def test_parameter_overwrite(config):
-    """Test that parameters cannot be overwritten in the config"""
+def test_setting_overwrite(config):
+    """Test that settings cannot be overwritten in the config"""
 
     # 1. direct access
-    config.a = Parameter(1)
+    config.a = Setting(1)
 
     with pytest.raises(ConfigException):
-        config.a = Parameter(2)
+        config.a = Setting(2)
 
     assert config.a == 1
 
     # 2. instance attribute
     class Obj:
-        b = Parameter(3)
+        b = Setting(3)
 
     obj = Obj()
 
@@ -143,4 +143,4 @@ def test_parameter_overwrite(config):
     # see: https://docs.python.org/3/reference/datamodel.html#object.__set__
     Obj.b = 4
     assert Obj.b == 4
-    assert isinstance(Obj.__dict__["b"], int)  # not a parameter anymore
+    assert isinstance(Obj.__dict__["b"], int)  # not a setting anymore

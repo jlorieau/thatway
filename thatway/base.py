@@ -4,7 +4,7 @@ from threading import Lock
 from collections.abc import Mapping
 import logging
 
-__all__ = ("ConfigException", "Config", "Parameter")
+__all__ = ("ConfigException", "Config", "Setting")
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +17,15 @@ class ConfigException(Exception):
 missing = object()
 
 
-class Parameter:
-    """A descriptor for a Config parameter."""
+class Setting:
+    """A descriptor for a Config setting."""
 
     __slots__ = ("value", "desc", "allowed_types")
 
-    #: The value for the parameter
+    #: The value for the setting
     value: t.Any
 
-    #: (optional) The description for this parameter
+    #: (optional) The description for this setting
     desc: str
 
     #: (optional) A tuple of allowed types for the values
@@ -53,28 +53,28 @@ class Parameter:
         return f"Param({self.value})"
 
     def __get__(self, instance, owner):
-        """Get the parameter value"""
+        """Get the setting value"""
         return self.value
 
     def __set__(self, instance, value):
         raise ConfigException(
-            f"Can't set Parameter attribute with "
+            f"Can't set Setting attribute with "
             f"value '{value}'--use the Config.update or load "
             f"methods."
         )
 
     def _config_insert(self, location: str):
-        """Insert this parameter in the config at the given location.
+        """Insert this setting in the config at the given location.
 
-        Parameters
+        Settings
         ----------
         location
-            The location of the parameter. e.g. 'Obj.a'
+            The location of the setting. e.g. 'Obj.a'
 
         Raises
         ------
         ConfigException
-            Raised if trying to insert this parameter by something else already
+            Raised if trying to insert this setting by something else already
             exists at that location in the config.
         """
         keys = location.split(self.delim)
@@ -84,13 +84,13 @@ class Parameter:
         for key in keys[:-1]:
             sub_config = getattr(sub_config, key)
 
-        # The last key is where this parameter should be inserted.
+        # The last key is where this setting should be inserted.
         last_key = keys[-1]
         if last_key not in sub_config.__dict__:
             # If it's not inserted already, place it in there.
             sub_config.__dict__[last_key] = self
         elif id(sub_config.__dict__[last_key]) != id(self):
-            # Oops, another object's in that place! There's a parameter collision
+            # Oops, another object's in that place! There's a setting collision
             other_value = sub_config.__dict__[last_key]
             raise ConfigException(
                 f"Cannot insert '{self}' at '{location}'. The '{other_value}' "
@@ -109,7 +109,7 @@ class ConfigMeta(type):
 
 
 class Config(metaclass=ConfigMeta):
-    """A thread-safe Config manager to get and set configuration parameters.
+    """A thread-safe Config manager to get and set configuration settings.
 
     Notes
     -----
@@ -143,16 +143,16 @@ class Config(metaclass=ConfigMeta):
             return cls._instance
 
     def __init__(self, **kwargs):
-        # Set the specified parameters
+        # Set the specified settings
         for k, v in kwargs.items():
             setattr(self, k, v)
 
     def __getattribute__(self, key):
         """Get attributes Config with support for attribute nesting"""
         try:
-            # The returned value should be a parameter or a Config object
+            # The returned value should be a setting or a Config object
             value = super().__getattribute__(key)
-            return value.value if isinstance(value, Parameter) else value
+            return value.value if isinstance(value, Setting) else value
             # return super().__getattribute__(key)
         except AttributeError:
             # Create a dict by default for a missing attribute
@@ -164,11 +164,11 @@ class Config(metaclass=ConfigMeta):
         if key in ("_instance",):
             # Special keys that can have their values replaced
             super().__setattr__(key, value)
-        elif key not in self.__dict__ and isinstance(value, Parameter):
-            # New entries are allowed as long as they are parameters
+        elif key not in self.__dict__ and isinstance(value, Setting):
+            # New entries are allowed as long as they are settings
             self.__dict__[key] = value
-        elif not isinstance(value, Parameter):
-            raise ConfigException(f"Only Parameters can be inserted in the Config")
+        elif not isinstance(value, Setting):
+            raise ConfigException(f"Only Settings can be inserted in the Config")
         elif key in self.__dict__:
             # If it already exists, don't allow a rewrite
             raise ConfigException(
@@ -184,7 +184,7 @@ class Config(metaclass=ConfigMeta):
     def update(self, updates: Mapping) -> None:
         """Recursively update config with values from a dict.
 
-        Parameters
+        Settings
         ----------
         updates
             The dict with values to recursively update
@@ -193,20 +193,20 @@ class Config(metaclass=ConfigMeta):
         ------
         ConfigException
             Raised when the updates include a change that would replace a
-            sub-config (subsection) that includes parameters with a single
-            parameter.
+            sub-config (subsection) that includes settings with a single
+            setting.
         KeyError
             If a key as specified that doesn't exist in this config
         ValueError
             If the update dict contains a  value that has a different
-            type then the corresponding parameter's value
+            type then the corresponding setting's value
         """
         for k, v in updates.items():
             try:
                 current_value = self.__dict__[k]
             except KeyError:
                 raise KeyError(
-                    f"Tried assigning parameter with name '{k}' which does "
+                    f"Tried assigning setting with name '{k}' which does "
                     f"not exist in the Config"
                 )
 
@@ -222,16 +222,16 @@ class Config(metaclass=ConfigMeta):
                 # current_value is a sub-config with items in it. Overwriting
                 # This sub-config is not allowed
                 raise ConfigException(
-                    f"Cannot replace config section '{k}' with a parameter '{v}'"
+                    f"Cannot replace config section '{k}' with a setting '{v}'"
                 )
-            elif isinstance(current_value, Parameter):
-                # Get the parameter value's type and allowed types
+            elif isinstance(current_value, Setting):
+                # Get the setting value's type and allowed types
                 value_type = type(current_value.value)
                 allowed_types = current_value.allowed_types
                 types = [] if allowed_types is None else list(allowed_types)
                 types += [value_type]
 
-                # Replace the parameter's value, trying to coerce the type
+                # Replace the setting's value, trying to coerce the type
                 found_type = False
                 for allowed_type in types:
                     try:
@@ -247,4 +247,4 @@ class Config(metaclass=ConfigMeta):
                     )
 
             else:
-                raise ConfigException("Parameter not in Config")
+                raise ConfigException("Setting not in Config")

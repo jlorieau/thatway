@@ -1,4 +1,4 @@
-from .base import Config, Parameter, ConfigException
+from .base import Config, Setting, ConfigException
 
 # Config singleton instance
 config = Config()
