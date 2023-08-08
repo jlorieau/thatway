@@ -117,9 +117,6 @@ class Config(metaclass=ConfigMeta):
     is because the Config was designed to be configured on the fly.
     """
 
-    #: Different names for subsections in a dict which could contain config settings
-    section_aliases = ("config", "Config")
-
     #: The root singleton instance
     _instance: t.Optional["Config"] = None
 
