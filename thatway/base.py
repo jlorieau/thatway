@@ -278,3 +278,7 @@ class Config(metaclass=ConfigMeta):
         with open(filepath, "r") as f:
             d = yaml.load(f, Loader=Loader)
         self.update(d)
+
+    def dumps_yaml(self) -> str:
+        """Dump settings from the config into a yaml string"""
+        return yaml.dump(self.dump(), Dumper=Dumper)

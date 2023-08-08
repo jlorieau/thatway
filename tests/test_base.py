@@ -197,3 +197,18 @@ def test_config_loads_yaml(config):
     # Assigning a new setting isn't allowed
     with pytest.raises(KeyError):
         config.loads_yaml("b: 2")
+
+
+def test_config_dumps_yaml(config):
+    """Test the config.dumps_yaml method for generating yaml strings"""
+
+    # Setup a config
+    class Obj:
+        a = Setting(1)
+
+    config.b = Setting("name")
+    config.nested.c = Setting(True)
+
+    # Compare the yaml string
+    yaml = config.dumps_yaml()
+    assert yaml == "Obj:\n  a: 1\nb: name\nnested:\n  c: true\n"
