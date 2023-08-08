@@ -1,12 +1,19 @@
 ThatWay
 =======
-Decentralized Configuration
+Thatway is a simple, decentralized configuration manager.
+
+Place your configuration settings throughout your application, and thatway
+collects them and allows you to modify them through configurations files.
 
 Rules
 -----
 
+The following are design decisions on the behavior of thatway's configuration manager.
+
 1. Configure directly
 ~~~~~~~~~~~~~~~~~~~~~
+
+Parameters can be set directly on the config object.
 
 .. code-block:: python
 
@@ -21,6 +28,8 @@ Rules
 2. Configure object attributes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Parameters can be set as object attributes.
+
 .. code-block:: python
 
     >>> from thatway import Parameter
@@ -34,6 +43,9 @@ Rules
 3. Configuration locking
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
+Parameters cannot be accidentally modified. Once they're set, they're set until
+the config is updated.
+
 .. code-block:: python
 
     >>> from thatway import Parameter
@@ -44,17 +56,15 @@ Rules
     Traceback (most recent call last):
     ...
     thatway.base.ConfigException: Entry 'b' already in the Config--use a Config.update or load method to change its value.
+    >>> config.update({'b': 5})
+    >>> config.b
+    5
 
-4. Parameter descriptions
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    >>> from thatway import Parameter
-    >>> config.c = Parameter(4, desc="The 'c' attribute")
-
-5. Type Enforcement
+4. Type Enforcement
 ~~~~~~~~~~~~~~~~~~~
+
+Parameter types are checked and maintained with the parameter's value type, and
+the ``allowed_types`` optional argument.
 
 .. code-block:: python
 
@@ -72,6 +82,8 @@ Rules
 6. Missing Parameters
 ~~~~~~~~~~~~~~~~~~~~~
 
+Trying to update a parameter that doesn't exist is not possible.
+
 .. code-block:: python
 
     >>> from thatway import Parameter
@@ -79,3 +91,16 @@ Rules
     Traceback (most recent call last):
     ...
     KeyError: "Tried assigning parameter with name 'f' which does not exist in the Config"
+
+Features
+--------
+
+1. Parameter descriptions
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Parameters can include descriptions.
+
+.. code-block:: python
+
+    >>> from thatway import Parameter
+    >>> config.c = Parameter(4, desc="The 'c' attribute")
