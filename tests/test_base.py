@@ -128,10 +128,11 @@ def test_config_update_type_matching(config):
     """Test the config.update method with mismatched types"""
     config.a = Setting(1)
     config.nested.b = Setting(2, allowed_types=(int, str))
+    config.c = Setting(None, allowed_types=(int, None))
 
     # Can't change the value of 'a'
     with pytest.raises(ValueError):
-        config.update({"a": "new value"})
+        config.update({"a": "new value", "c": None})
 
     # Can change the value of 'nested.b' to a int or string
     config.update({"nested": {"b": "my new string"}})
@@ -195,7 +196,9 @@ def test_config_loads_yaml(config, mode, tmp_path):
     assert config.a == 2
 
 
-@pytest.mark.parametrize("value", (1, "a", True, (1,), (1, 2, 3), ["a", "b", "c"]))
+@pytest.mark.parametrize(
+    "value", (1, "a", True, (1,), (1, 2, 3), ["a", "b", "c"], None)
+)
 def test_config_dumps_yaml(config, value):
     """Test the config.dumps_yaml method for generating yaml strings"""
 
@@ -237,7 +240,9 @@ def test_config_loads_toml(config, mode, tmp_path):
     assert Obj.a == 2
 
 
-@pytest.mark.parametrize("value", (1, "a", True, (1,), (1, 2, 3), ["a", "b", "c"]))
+@pytest.mark.parametrize(
+    "value", (1, "a", True, (1,), (1, 2, 3), ["a", "b", "c"], None)
+)
 def test_config_dumps_toml(config, value):
     """Test the config.dumps_toml method for generating toml strings"""
 

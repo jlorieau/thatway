@@ -229,12 +229,21 @@ class Config(metaclass=ConfigMeta):
                 )
             elif isinstance(current_value, Setting):
                 # Get the setting value's type and allowed types
-                value_type = type(current_value.value)
+                value_type = (
+                    type(current_value.value)
+                    if current_value.value is not None
+                    else None
+                )
                 allowed_types = current_value.allowed_types
                 types = [] if allowed_types is None else list(allowed_types)
                 types += [value_type]
 
                 # Replace the setting's value, trying to coerce the type
+                if None in types and (v is None or v == "None"):
+                    # None is special, since it can't be cast
+                    current_value.value = None
+                    continue
+
                 found_type = False
                 for allowed_type in types:
                     try:
@@ -274,6 +283,8 @@ class Config(metaclass=ConfigMeta):
             return str(value).lower()
         elif isinstance(value, list) or isinstance(value, tuple):
             return "\n" + "\n".join(f"{spacer}- {i}" for i in value)
+        elif value is None:
+            return "null"
         else:
             return str(value)
 
@@ -333,6 +344,8 @@ class Config(metaclass=ConfigMeta):
             return f"'{value}'"
         elif isinstance(value, list) or isinstance(value, tuple):
             return f"[{', '.join(map(Config._to_toml, value))}]"
+        elif value is None:
+            return "'None'"
         else:
             return str(value)
 
