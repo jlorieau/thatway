@@ -51,4 +51,21 @@ Parameter descriptions
 .. code-block:: python
 
     >>> from thatway import Parameter
-    >>> config.c = Parameter(3, desc="The 'c' attribute")
+    >>> config.c = Parameter(4, desc="The 'c' attribute")
+
+Type Enforcement
+~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    >>> from thatway import Parameter
+    >>> config.d = Parameter(5, allowed_types=(int, str))
+    >>> config.update({'d': 'my new d value'})
+    >>> config.d
+    'my new d value'
+    >>> config.e = Parameter(6)
+    >>> config.update({'e': 'my new e value'})
+    Traceback (most recent call last):
+    ...
+    ValueError: Could not convert 'my new e value' into any of the following types: [<class 'int'>]
+

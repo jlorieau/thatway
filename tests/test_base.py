@@ -96,11 +96,15 @@ def test_config_update(config):
     assert config.nested.b == 4
 
 
-
 def test_config_update_type_matching(config):
     """Test the config.update method with mismatched types"""
     config.a = Parameter(1)
-    config.nested.b = Parameter(2)
+    config.nested.b = Parameter(2, allowed_types=(int, str))
 
+    # Can't change the value of 'a'
     with pytest.raises(ValueError):
-        config.update({'a': 'new value', 'nested': {'b': "new nested b"}})
+        config.update({'a': 'new value'})
+
+    # Can change the value of 'nested.b' to a int or string
+    config.update({'nested': {'b': 'my new string'}})
+    assert config.nested.b == "my new string"

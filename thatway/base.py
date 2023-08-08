@@ -5,11 +5,9 @@ from collections.abc import Mapping
 import re
 import logging
 
-
 __all__ = ("ConfigException", "Config", "Parameter")
 
 logger = logging.getLogger(__name__)
-
 
 #: The regex to validate parameter key
 key_regex = re.compile(r"^[_A-Za-z][_A-Za-z0-9.]*$")
@@ -152,11 +150,25 @@ class Config(metaclass=ConfigMeta):
                     f"Cannot replace config section '{k}' with a parameter '{v}'"
                 )
             elif isinstance(current_value, Parameter):
-                # Get the parameter value's type
+                # Get the parameter value's type and allowed types
                 value_type = type(current_value.value)
+                allowed_types = current_value.allowed_types
+                types = [] if allowed_types is None else list(allowed_types)
+                types += [value_type]
 
                 # Replace the parameter's value, trying to coerce the type
-                current_value.value = value_type(v)
+                found_type = False
+                for t in types:
+                    try:
+                        current_value.value = t(v)
+                        found_type = True
+                    except ValueError:
+                        continue
+
+                if not found_type:
+                    raise ValueError(f"Could not convert '{v}' into any of the "
+                                     f"following types: {types}")
+
             else:
                 raise ConfigException("Parameter not in Config")
 
@@ -169,7 +181,7 @@ class Parameter:
     """A descriptor for a Config parameter.
     """
 
-    __slots__ = ("name", "value", "desc")
+    __slots__ = ("name", "value", "desc", "allowed_types")
 
     #: The name of the parameter in the Config
     name: str
@@ -177,15 +189,20 @@ class Parameter:
     #: The value for the parameter
     value: t.Any
 
-    #: The description for this parameter
+    #: (optional) The description for this parameter
     desc: str
+
+    #: (optional) A tuple of allowed types for the values
+    allowed_types: t.Tuple[t.Any]
 
     #: The delimiter used for splitting keys
     delim: str = "."
 
-    def __init__(self, value, desc=""):
+    def __init__(self, value: t.Any, desc: str = "",
+                 allowed_types: t.Optional[t.Tuple[t.Any, ...]] = None):
         self.value = value
         self.desc = desc
+        self.allowed_types = allowed_types
 
     def __set_name__(self, owner, name):
         cls_name = owner.__name__
@@ -219,4 +236,3 @@ class Parameter:
     def __set__(self, instance, value):
         raise ConfigException(f"Can't set Parameter attribute with "
                               f"value '{value}'--use the Config.load methods.")
-
