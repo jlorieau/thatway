@@ -7,6 +7,56 @@ centralized file or submodule--and thatway collects them and allows you to
 modify them through configurations files. Decentralized configuration reduces
 the complexity of submodules and the coupling between submodules.
 
+Quickstart
+----------
+
+1. Create a package with settings.
+
+`examples/mypkg/moduleA/file.py <examples/mypkg/moduleA/file.py>`_
+
+.. literalinclude:: examples/mypkg/moduleA/file.py
+    :language: python
+
+`examples/mypkg/moduleB/file.py <examples/mypkg/moduleB/file.py>`_
+
+.. literalinclude:: examples/mypkg/moduleB/file.py
+    :language: python
+
+2. View settings:
+
+.. code-block:: python
+
+    import examples.mypkg
+    from thatway import config
+    print(config.dumps_yaml())
+    FirstClass:
+      my_attribute: true  # Whether 'my_attribute' is an antribue
+      max_instances: 3  # Maximum number of instances
+    moduleB:
+      msg: This is my message
+
+3. Load different settings:
+
+`examples/mypkg/new_settings.yaml <examples/mypkg/new_settings.yaml>`_
+
+.. literalinclude:: examples/mypkg/new_settings.yaml
+    :language: yaml
+
+with python:
+
+.. code-block:: python
+
+    from pathlib import Path
+    import examples.mypkg
+    from thatway import config
+    config.load_yaml(str(Path("examples") / "mypkg" / "new_settings.yaml"))
+    print(config.dumps_yaml())
+    FirstClass:
+      my_attribute: false  # Whether 'my_attribute' is an antribue
+      max_instances: 2  # Maximum number of instances
+    moduleB:
+      msg: This is my message
+
 Rules
 -----
 

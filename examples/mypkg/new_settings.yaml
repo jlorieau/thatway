@@ -1,0 +1,3 @@
+FirstClass:
+  my_attribute: false
+  max_instances: 2
