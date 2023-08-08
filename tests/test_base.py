@@ -90,6 +90,36 @@ def test_direct_access_mutation(config):
     assert config.nested.b == "sub level"
 
 
+def test_overwrite(config):
+    """Test that settings cannot be overwritten in the config"""
+
+    # 1. direct access
+    config.a = Setting(1)
+
+    with pytest.raises(ConfigException):
+        config.a = Setting(2)
+
+    assert config.a == 1
+
+    # 2. instance attribute
+    class Obj:
+        b = Setting(3)
+
+    obj = Obj()
+
+    with pytest.raises(ConfigException):
+        obj.b = 4
+
+    assert obj.b == 3
+
+    # 3. class attribute. These can be overwritten because the descriptor can
+    # be replaced.
+    # see: https://docs.python.org/3/reference/datamodel.html#object.__set__
+    Obj.b = 4
+    assert Obj.b == 4
+    assert isinstance(Obj.__dict__["b"], int)  # not a setting anymore
+
+
 def test_config_update(config):
     """Test the config.update method"""
     config.a = Setting(1)
@@ -123,31 +153,47 @@ def test_config_update_missing(config):
         config.update({"new_value": "2"})
 
 
-def test_setting_overwrite(config):
-    """Test that settings cannot be overwritten in the config"""
+def test_config_dump(config):
+    """Test the config.dump method for converting into a dict tree"""
 
-    # 1. direct access
+    # Set up the config
+    class Obj:
+        a = Setting(1)
+
+    config.b = Setting("name")
+    config.nested.c = Setting(True)
+
+    # Dump and test the contents
+    d = config.dump()
+
+    assert isinstance(d, dict)
+    assert d.keys() == {"Obj", "b", "nested"}
+
+    assert isinstance(d["Obj"], dict)
+    assert d["Obj"].keys() == {"a"}
+    assert d["Obj"]["a"] == 1
+
+    assert d["b"] == "name"
+
+    assert isinstance(d["nested"], dict)
+    assert d["nested"].keys() == {"c"}
+    assert isinstance(d["nested"]["c"], bool)
+    assert d["nested"]["c"]
+
+
+def test_config_loads_yaml(config):
+    """Test the config.loads_yaml method for loading yaml strings"""
+    # Set up a config
     config.a = Setting(1)
 
-    with pytest.raises(ConfigException):
-        config.a = Setting(2)
+    # Load and replace the value
+    config.loads_yaml("a: 2")
+    assert config.a == 2
 
-    assert config.a == 1
+    # Switching the type isn't allowed
+    with pytest.raises(ValueError):
+        config.loads_yaml("a: 'new string'")
 
-    # 2. instance attribute
-    class Obj:
-        b = Setting(3)
-
-    obj = Obj()
-
-    with pytest.raises(ConfigException):
-        obj.b = 4
-
-    assert obj.b == 3
-
-    # 3. class attribute. These can be overwritten because the descriptor can
-    # be replaced.
-    # see: https://docs.python.org/3/reference/datamodel.html#object.__set__
-    Obj.b = 4
-    assert Obj.b == 4
-    assert isinstance(Obj.__dict__["b"], int)  # not a setting anymore
+    # Assigning a new setting isn't allowed
+    with pytest.raises(KeyError):
+        config.loads_yaml("b: 2")

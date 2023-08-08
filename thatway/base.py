@@ -4,6 +4,13 @@ from threading import Lock
 from collections.abc import Mapping
 import logging
 
+import yaml
+
+try:
+    from yaml import CLoader as Loader, CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
+
 __all__ = ("ConfigException", "Config", "Setting")
 
 logger = logging.getLogger(__name__)
@@ -248,3 +255,26 @@ class Config(metaclass=ConfigMeta):
 
             else:
                 raise ConfigException("Setting not in Config")
+
+    def dump(self) -> dict:
+        """Convert the config into a tree dict structure"""
+        d = dict()
+        for k, v in self.__dict__.items():
+            if isinstance(v, Setting):
+                d[k] = v.value
+            elif isinstance(v, Config):
+                d[k] = v.dump()  # This method
+            else:
+                raise ConfigException(f"Unknown config type for entry '{v}'")
+        return d
+
+    def loads_yaml(self, string: str) -> None:
+        """Load settings from a yaml string into the config"""
+        d = yaml.load(string, Loader=Loader)
+        self.update(d)
+
+    def load_yaml(self, filepath: str) -> None:
+        """Load settings from a yaml file into the config"""
+        with open(filepath, "r") as f:
+            d = yaml.load(f, Loader=Loader)
+        self.update(d)
