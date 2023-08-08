@@ -2,13 +2,16 @@ ThatWay
 =======
 Thatway is a simple, decentralized configuration manager.
 
-Place your configuration settings throughout your application, and thatway
-collects them and allows you to modify them through configurations files.
+Place your configuration settings throughout your application--not in a
+centralized file or submodule--and thatway collects them and allows you to
+modify them through configurations files. Decentralized configuration reduces
+the complexity of submodules and the coupling between submodules.
 
 Rules
 -----
 
-The following are design decisions on the behavior of thatway's configuration manager.
+The following are design decisions on the behavior of thatway's configuration
+manager.
 
 1. Configure directly
 ~~~~~~~~~~~~~~~~~~~~~
@@ -44,7 +47,7 @@ Parameters can be set as object attributes.
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Parameters cannot be accidentally modified. Once they're set, they're set until
-the config is updated.
+the config's ``update`` or ``load`` methods are used.
 
 .. code-block:: python
 
@@ -56,6 +59,10 @@ the config is updated.
     Traceback (most recent call last):
     ...
     thatway.base.ConfigException: Entry 'b' already in the Config--use a Config.update or load method to change its value.
+    >>> config.b = 5  # oops!
+    Traceback (most recent call last):
+    ...
+    thatway.base.ConfigException: Only Parameters can be inserted in the Config
     >>> config.update({'b': 5})
     >>> config.b
     5
