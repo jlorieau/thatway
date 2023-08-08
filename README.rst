@@ -14,13 +14,23 @@ Quickstart
 
 `examples/mypkg/moduleA/file.py <examples/mypkg/moduleA/file.py>`_
 
-.. literalinclude:: examples/mypkg/moduleA/file.py
-    :language: python
+.. code-block:: python
+
+    from thatway import Setting
+
+
+    class FirstClass:
+        my_attribute = Setting(True, desc="Whether 'my_attribute' is an antribue")
+
+        max_instances = Setting(3, desc="Maximum number of instances")
 
 `examples/mypkg/moduleB/file.py <examples/mypkg/moduleB/file.py>`_
 
-.. literalinclude:: examples/mypkg/moduleB/file.py
-    :language: python
+.. code-block:: python
+
+    from thatway import config, Setting
+
+    config.moduleB.msg = Setting("This is my message")
 
 2. View settings:
 
@@ -39,8 +49,11 @@ Quickstart
 
 `examples/mypkg/new_settings.yaml <examples/mypkg/new_settings.yaml>`_
 
-.. literalinclude:: examples/mypkg/new_settings.yaml
-    :language: yaml
+.. code-block:: yaml
+
+    FirstClass:
+      my_attribute: false
+      max_instances: 2
 
 with python:
 
