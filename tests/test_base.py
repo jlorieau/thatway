@@ -22,9 +22,11 @@ def test_cls_attribute(config):
     assert Obj.a == 3
     assert obj.a == 3
 
-    # Check the config object
-    assert isinstance(config.__dict__["Obj"].__dict__["a"], Parameter)
     assert config.Obj.a == 3
+
+    # Check the parameter object
+    param_obj = config.__dict__["Obj"].__dict__["a"]
+    assert isinstance(param_obj, Parameter)
 
 
 def test_cls_attribute_mutation(config):
@@ -66,6 +68,10 @@ def test_direct_access(config):
     with pytest.raises(ConfigException):
         config.c = 3
 
+    # Check the parameter object
+    param_obj = config.__dict__["a"]
+    assert isinstance(param_obj, Parameter)
+
 
 def test_direct_access_mutation(config):
     """Test the mutating of a directly accessed config value"""
@@ -90,7 +96,7 @@ def test_config_update(config):
     config.nested.b = Parameter(2)
 
     # Updating allows overwrites
-    config.update({'a': 3, 'nested': {'b': 4}})
+    config.update({"a": 3, "nested": {"b": 4}})
 
     assert config.a == 3
     assert config.nested.b == 4
@@ -103,8 +109,38 @@ def test_config_update_type_matching(config):
 
     # Can't change the value of 'a'
     with pytest.raises(ValueError):
-        config.update({'a': 'new value'})
+        config.update({"a": "new value"})
 
     # Can change the value of 'nested.b' to a int or string
-    config.update({'nested': {'b': 'my new string'}})
+    config.update({"nested": {"b": "my new string"}})
     assert config.nested.b == "my new string"
+
+
+def test_parameter_overwrite(config):
+    """Test that parameters cannot be overwritten in the config"""
+
+    # 1. direct access
+    config.a = Parameter(1)
+
+    with pytest.raises(ConfigException):
+        config.a = Parameter(2)
+
+    assert config.a == 1
+
+    # 2. instance attribute
+    class Obj:
+        b = Parameter(3)
+
+    obj = Obj()
+
+    with pytest.raises(ConfigException):
+        obj.b = 4
+
+    assert obj.b == 3
+
+    # 3. class attribute. These can be overwritten because the descriptor can
+    # be replaced.
+    # see: https://docs.python.org/3/reference/datamodel.html#object.__set__
+    Obj.b = 4
+    assert Obj.b == 4
+    assert isinstance(Obj.__dict__["b"], int)  # not a parameter anymore
