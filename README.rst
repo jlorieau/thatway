@@ -28,6 +28,16 @@ Settings can be set directly on the config object.
     >>> config.nested.b
     'nested'
 
+Trying to set an entry in the config without a setting raises an exception.
+
+.. code-block:: python
+
+    >>> from thatway import config
+    >>> config.new_value = 3
+    Traceback (most recent call last):
+    ...
+    thatway.base.ConfigException: Only Settings can be inserted in the Config
+
 2. Configure object attributes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -41,7 +51,6 @@ Settings can be set as object attributes.
     >>> obj = Obj()
     >>> obj.attribute
     'my value'
-
 
 3. Configuration locking
 ~~~~~~~~~~~~~~~~~~~~~~~~
