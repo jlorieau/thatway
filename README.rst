@@ -45,16 +45,16 @@ Rules
     ...
     thatway.base.ConfigException: Entry 'b' already in the Config--use a Config.update or load method to change its value.
 
-Parameter descriptions
-~~~~~~~~~~~~~~~~~~~~~~
+4. Parameter descriptions
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
     >>> from thatway import Parameter
     >>> config.c = Parameter(4, desc="The 'c' attribute")
 
-Type Enforcement
-~~~~~~~~~~~~~~~~
+5. Type Enforcement
+~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -69,8 +69,8 @@ Type Enforcement
     ...
     ValueError: Could not convert 'my new e value' into any of the following types: [<class 'int'>]
 
-Missing Parameters
-~~~~~~~~~~~~~~~~~~
+6. Missing Parameters
+~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
