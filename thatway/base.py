@@ -2,7 +2,6 @@
 import typing as t
 from threading import Lock
 from collections.abc import Mapping
-import re
 import logging
 
 __all__ = ("ConfigException", "Config", "Parameter")
