@@ -133,7 +133,7 @@ class Config(metaclass=ConfigMeta):
         for k, v in updates.items():
             try:
                 current_value = self.__dict__[k]
-            except KeyError as exc:
+            except KeyError:
                 raise KeyError(f"Tried assigning parameter with name '{k}' which does "
                                f"not exist in the Config")
 
@@ -141,12 +141,13 @@ class Config(metaclass=ConfigMeta):
                 # Use the corresponding update function. ex: dict.update
                 current_value.update(v)
             elif isinstance(v, Config):
-                # If it's a sub-config upget, use its corresponding update (this method)
+                # If it's a sub-config object, use its corresponding update
+                # (this method)
                 current_value.update(v.__dict__)
             elif isinstance(current_value, Config) and len(current_value.__dict__) > 0:
                 # In this case, the update value 'v' is a simple value but the
                 # current_value is a sub-config with items in it. Overwriting
-                # This sub-config is not allowd
+                # This sub-config is not allowed
                 raise ConfigException(
                     f"Cannot replace config section '{k}' with a parameter '{v}'"
                 )
@@ -159,9 +160,9 @@ class Config(metaclass=ConfigMeta):
 
                 # Replace the parameter's value, trying to coerce the type
                 found_type = False
-                for t in types:
+                for allowed_type in types:
                     try:
-                        current_value.value = t(v)
+                        current_value.value = allowed_type(v)
                         found_type = True
                     except ValueError:
                         continue
