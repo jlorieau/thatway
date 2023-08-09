@@ -112,6 +112,12 @@ def test_overwrite(config):
     assert isinstance(Obj.__dict__["b"], int)  # not a setting anymore
 
 
+def test_config_method_overwrite(config):
+    """Test overwriting a config method."""
+    with pytest.raises(ConfigException):
+        config.update = Setting(3)
+
+
 def test_config_update(config):
     """Test the config.update method"""
     config.a = Setting(1)

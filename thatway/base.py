@@ -167,6 +167,9 @@ class Config(metaclass=ConfigMeta):
         if key in ("_instance",):
             # Special keys that can have their values replaced
             super().__setattr__(key, value)
+        elif hasattr(Config, key):
+            # Class methods cannot be overwritten
+            raise ConfigException(f"Config class method '{key}' cannot be overwritten")
         elif key not in self.__dict__ and isinstance(value, Setting):
             # New entries are allowed as long as they are settings
             self.__dict__[key] = value
