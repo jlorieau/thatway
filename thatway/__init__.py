@@ -1,5 +1,7 @@
 from .base import Config, Setting, ConfigException
 
+__all__ = (Config, Setting, ConfigException)
+
 # Config singleton instance
 config = Config()
 
