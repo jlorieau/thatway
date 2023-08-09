@@ -43,6 +43,9 @@ class Setting:
         desc: str = "",
         allowed_types: t.Optional[t.Tuple[t.Any, ...]] = None,
     ):
+        # Allow only immutable values for settings
+        if not self._is_mutable(value):
+            raise ConfigException(f"Setting value '{value}' must be immutable")
         self.value = value
         self.desc = desc
         self.allowed_types = allowed_types
@@ -65,6 +68,15 @@ class Setting:
             f"value '{value}'--use the Config.update or load "
             f"methods."
         )
+
+    @staticmethod
+    def _is_mutable(value: t.Any) -> bool:
+        """Test whether a value is mutable"""
+        try:
+            hash(value)
+            return True
+        except TypeError:
+            return False
 
     def _config_insert(self, location: str):
         """Insert this setting in the config at the given location.

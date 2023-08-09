@@ -112,6 +112,18 @@ def test_overwrite(config):
     assert isinstance(Obj.__dict__["b"], int)  # not a setting anymore
 
 
+def test_setting_immutability(config):
+    """Test that Setting values can only be immutables"""
+    # Immutable objects
+    for obj in (1, "a", (1, 2), True, None):
+        Setting(obj)
+
+    # Mutable objects
+    for obj in ({1, 2}, [1, 2], {"a": 1}):
+        with pytest.raises(ConfigException):
+            Setting(obj)
+
+
 def test_config_method_overwrite(config):
     """Test overwriting a config method."""
     with pytest.raises(ConfigException):
@@ -202,9 +214,7 @@ def test_config_loads_yaml(config, mode, tmp_path):
     assert config.a == 2
 
 
-@pytest.mark.parametrize(
-    "value", (1, "a", True, (1,), (1, 2, 3), ["a", "b", "c"], None)
-)
+@pytest.mark.parametrize("value", (1, "a", True, (1,), (1, 2, 3), None))
 def test_config_dumps_yaml(config, value):
     """Test the config.dumps_yaml method for generating yaml strings"""
 
@@ -246,9 +256,7 @@ def test_config_loads_toml(config, mode, tmp_path):
     assert Obj.a == 2
 
 
-@pytest.mark.parametrize(
-    "value", (1, "a", True, (1,), (1, 2, 3), ["a", "b", "c"], None)
-)
+@pytest.mark.parametrize("value", (1, "a", True, (1,), (1, 2, 3), None))
 def test_config_dumps_toml(config, value):
     """Test the config.dumps_toml method for generating toml strings"""
 

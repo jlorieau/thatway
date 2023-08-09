@@ -185,6 +185,21 @@ name and location.
     ...
     KeyError: "Tried assigning setting with name 'e' which does not exist in the Config"
 
+7. Immutable Settings Values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Setting values can only be immutable objects.
+
+.. code-block::
+
+    >>> from thatway import Setting
+    >>> config.cli.color = Setting(True)
+    >>> config.cli.default_filenames = Setting(('a.html', 'b.html'))
+    >>> config.cli.value_list = Setting([1, 2])  # lists are mutable
+    Traceback (most recent call last):
+    ...
+    thatway.base.ConfigException: Setting value '[1, 2]' must be immutable
+
 Features
 --------
 
@@ -227,7 +242,7 @@ Settings can be dumped in `toml <https://toml.io/en/>`_.
 
     [Obj]
       a = 1
-    b = name  # The 'b' setting
+    b = "name"  # The 'b' setting
     [nested]
       c = true
 
