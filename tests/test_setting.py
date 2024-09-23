@@ -3,11 +3,11 @@
 import pytest
 
 from thatway.conditions import ConditionFailure, is_positive
-from thatway.manager import SettingsNamespace
+from thatway.manager import SettingsManager
 from thatway.setting import Setting
 
 
-def test_setting_delete(settings: SettingsNamespace) -> None:
+def test_setting_delete(settings: SettingsManager) -> None:
     """Test the :cls:`Setting` :meth:`__delete` method"""
 
     # 1. Try a setting owned by a class
@@ -33,7 +33,7 @@ def test_setting_delete(settings: SettingsNamespace) -> None:
     assert test.s == "t"
 
 
-def test_setting_insert(settings: SettingsNamespace) -> None:
+def test_setting_insert(settings: SettingsManager) -> None:
     """Test the :cls:`Setting` :meth:`_insert` method."""
 
     # 1. Try a setting owned by a class
@@ -56,7 +56,7 @@ def test_setting_insert(settings: SettingsNamespace) -> None:
     assert not hasattr(module_settings.Test.s, "value")
 
 
-def test_setting_validate_cls_creation(settings: SettingsNamespace) -> None:
+def test_setting_validate_cls_creation(settings: SettingsManager) -> None:
     """Test the :cls:`Setting` :meth:`validate` method for class creation"""
 
     with pytest.raises(ConditionFailure):
@@ -65,7 +65,7 @@ def test_setting_validate_cls_creation(settings: SettingsNamespace) -> None:
             s = Setting(-3, "An int", is_positive)
 
 
-def test_setting_validate_instantiation(settings: SettingsNamespace) -> None:
+def test_setting_validate_instantiation(settings: SettingsManager) -> None:
     """Test the :cls:`Setting` :meth:`validate` method for class instantiation"""
 
     class Test:
@@ -78,7 +78,7 @@ def test_setting_validate_instantiation(settings: SettingsNamespace) -> None:
         Test()
 
 
-def test_setting_validate_change(settings: SettingsNamespace) -> None:
+def test_setting_validate_change(settings: SettingsManager) -> None:
     """Test the :cls:`Setting` :meth:`validate` method for class and instance setting
     change"""
 

@@ -2,12 +2,12 @@ from typing import Iterator
 
 import pytest
 
-from thatway.manager import SettingsNamespace
+from thatway.manager import SettingsManager, clear
 from thatway.manager import settings as s
 
 
 @pytest.fixture
-def settings() -> Iterator[SettingsNamespace]:
+def settings() -> Iterator[SettingsManager]:
     """Retrieve and reset the settings object"""
-    s.clear()
+    clear(s)
     yield s

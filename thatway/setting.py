@@ -3,7 +3,7 @@
 from typing import Callable, Generic, TypeVar, cast, overload
 
 from .conditions import ConditionFailure, SupportsRichComparison
-from .manager import SettingsNamespace, settings
+from .manager import SettingsManager, settings
 
 __all__ = ("Setting",)
 
@@ -132,7 +132,7 @@ class Setting(Generic[Value]):
         # Got through each key to access the corresponding namespace
         ns = settings
         for key in keys[:-1]:
-            ns = ns.__dict__.setdefault(key, SettingsNamespace())
+            ns = ns.__dict__.setdefault(key, SettingsManager())
 
         # See if the setting already exists
         if hasattr(ns, keys[-1]):
