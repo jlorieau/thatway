@@ -1,8 +1,9 @@
-from .base import Config, Setting, ConfigException
+from . import conditions
+from .conditions import ConditionFailure
+from .manager import settings
+from .setting import Setting
 
-__all__ = (Config, Setting, ConfigException)
+__all__ = ("conditions", "settings", "Setting", "ConditionFailure")
 
-# Config singleton instance
-config = Config()
 
-__version__ = (0, 6, 1)
+__version__ = (1, 0, 0)
