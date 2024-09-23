@@ -3,48 +3,61 @@
 from abc import abstractmethod
 from typing import Any, Callable, Protocol, TypeVar, runtime_checkable
 
-__all__ = ("greater_than", "lesser_than", "is_positive", "is_negative", "within")
+__all__ = (
+    "ConditionFailure",
+    "SupportsRichComparison",
+    "greater_than",
+    "lesser_than",
+    "is_positive",
+    "is_negative",
+    "within",
+    "allowed",
+)
 
 
-# Typing protocol to support ordering
-@runtime_checkable
-class Comparable(Protocol):
-    @abstractmethod
-    def __lt__(self: "SupportsOrdering", other: "SupportsOrdering") -> bool:
-        pass
-
-    @abstractmethod
-    def __eq__(self: "SupportsOrdering", other: object) -> bool:
-        pass
+# Exceptions
+class ConditionFailure(Exception):
+    """Raised when a condition fails"""
 
 
-SupportsOrdering = TypeVar("SupportsOrdering", bound=Comparable)
+# Protocols
+_T_contra = TypeVar("_T_contra", contravariant=True)
+
+
+class SupportsRichComparison(Protocol[_T_contra]):
+    def __lt__(self, other: _T_contra, /) -> bool: ...
+
+    def __gt__(self, other: _T_contra, /) -> bool: ...
 
 
 # Condition functions
 
 
-def greater_than(other: SupportsOrdering) -> Callable[[SupportsOrdering], bool]:
+def greater_than(
+    other: SupportsRichComparison,
+) -> Callable[[SupportsRichComparison], bool]:
     """Value must be greater than {other}"""
 
-    def _greater_than(value: SupportsOrdering) -> bool:
+    def _greater_than(value: SupportsRichComparison) -> bool:
         return value > other
 
     _greater_than.__doc__ = greater_than.__doc__
     return _greater_than
 
 
-def lesser_than(other: SupportsOrdering) -> Callable[[SupportsOrdering], bool]:
+def lesser_than(
+    other: SupportsRichComparison,
+) -> Callable[[SupportsRichComparison], bool]:
     """Value must be lesser than {other}"""
 
-    def _lesser_than(value: SupportsOrdering) -> bool:
+    def _lesser_than(value: SupportsRichComparison) -> bool:
         return value < other
 
     _lesser_than.__doc__ = greater_than.__doc__
     return _lesser_than
 
 
-def is_positive(value: SupportsOrdering) -> bool:
+def is_positive(value: SupportsRichComparison) -> bool:
     """Value must be positive"""
     if isinstance(value, int):
         return value > 0
@@ -54,7 +67,7 @@ def is_positive(value: SupportsOrdering) -> bool:
         raise NotImplementedError
 
 
-def is_negative(value: SupportsOrdering) -> bool:
+def is_negative(value: SupportsRichComparison) -> bool:
     """Value must be negative"""
     if isinstance(value, int):
         return value < 0
@@ -65,13 +78,13 @@ def is_negative(value: SupportsOrdering) -> bool:
 
 
 def within(
-    minimum: SupportsOrdering, maximum: SupportsOrdering
-) -> Callable[[SupportsOrdering], bool]:
+    minimum: SupportsRichComparison, maximum: SupportsRichComparison
+) -> Callable[[SupportsRichComparison], bool]:
     """Value must be within {minimum} and {maximum}."""
     min_func = greater_than(minimum)
     max_func = lesser_than(maximum)
 
-    def _within(value: SupportsOrdering) -> bool:
+    def _within(value: SupportsRichComparison) -> bool:
         return min_func(value) and max_func(value)
 
     if isinstance(within.__doc__, str):
