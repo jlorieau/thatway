@@ -62,20 +62,20 @@ def test_setting_validate_cls_creation(settings: SettingsNamespace) -> None:
     with pytest.raises(ConditionFailure):
 
         class Test:
-            s = Setting(-3, "A string", is_positive)
+            s = Setting(-3, "An int", is_positive)
 
 
 def test_setting_validate_instantiation(settings: SettingsNamespace) -> None:
     """Test the :cls:`Setting` :meth:`validate` method for class instantiation"""
 
     class Test:
-        s = Setting(3, "A string", is_positive)
+        s = Setting(3, "An int", is_positive)
 
         def __init__(self) -> None:
             self.s = -3
 
     with pytest.raises(ConditionFailure):
-        test = Test()
+        Test()
 
 
 def test_setting_validate_change(settings: SettingsNamespace) -> None:
