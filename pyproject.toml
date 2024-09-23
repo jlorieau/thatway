@@ -1,10 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "thatway"
 authors = [
     {name = "Justin Lorieau"},
 ]
-readme = "README.rst"
-requires-python = ">=3.8"
+readme = "README.md"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3",
@@ -23,16 +27,58 @@ packages = ["thatway"]
 version = {attr = "thatway.__version__"}
 
 [project.optional-dependencies]
-
 dev = [  # For development
-    "pytest>=7.4",  # Testing framework
+    "mypy >= 1.11",  # type annotations
     "twine>=4.0",  # Manage package uploads
-    "build",  # Manage package builds
     "black[d]",  # Code formatter
     ]
 
-[project.urls]
-Homepage = "https://github.com/jlorieau/thatway"
+tests = [
+    "pytest>=7.4",  # Testing framework
+]
 
+# Linting settings
+[tool.mypy]
+disallow_untyped_defs = true
+exclude = [
+    "tests*",
+]
+
+# Testing settings
 [tool.pytest.ini_options]
 addopts = "--doctest-modules --doctest-glob='*.rst'"
+testpaths = [
+  "tests",
+  "src"  # doctests
+  ]
+
+# Hatch environments
+[tool.hatch.envs.default]
+features = [
+  "tests",
+  "dev"
+ ]
+
+ # Build hooks and configuration
+
+[tool.hatch.build.targets.wheel]
+only-include = ["thatway"]
+sources = ["thatway"]
+
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+dependencies = [
+    "hatch-mypyc",
+    "mypy",
+    "types-PyYAML"
+]
+require-runtime-dependencies = true
+include = [
+    "/thatway",
+]
+exclude = [
+    "**/__init__.py",
+]
+mypy-args = ["--ignore-missing-imports"]
+
+[build.targets.wheel.hooks.mypyc.options]
+opt_level = "3"
