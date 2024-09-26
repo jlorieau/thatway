@@ -17,7 +17,7 @@ classifiers = [
     ]
 dynamic = ["version"]
 dependencies = [
-    "pyyaml>=6.0",  # Parsing YAML for Config
+    "tomlkit>=0.13",  # Parsing toml
 ]
 
 [tool.setuptools]
