@@ -1,9 +1,6 @@
-from . import conditions
-from .conditions import ConditionFailure
-from .manager import settings
-from .setting import Setting
-
-__all__ = ("conditions", "settings", "Setting", "ConditionFailure")
-
+from .conditions import *
+from .exceptions import *
+from .manager.manager import *
+from .setting import *
 
 __version__ = (1, 0, 0)

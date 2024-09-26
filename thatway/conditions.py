@@ -1,11 +1,8 @@
 """Utility condition functions for evaluating values"""
 
-from abc import abstractmethod
-from typing import Any, Callable, Protocol, TypeVar, runtime_checkable
+from typing import Any, Callable, Protocol, TypeVar
 
 __all__ = (
-    "ConditionFailure",
-    "SupportsRichComparison",
     "greater_than",
     "lesser_than",
     "is_positive",
@@ -13,11 +10,6 @@ __all__ = (
     "within",
     "allowed",
 )
-
-
-# Exceptions
-class ConditionFailure(Exception):
-    """Raised when a condition fails"""
 
 
 # Protocols

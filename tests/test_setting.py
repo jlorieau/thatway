@@ -2,8 +2,9 @@
 
 import pytest
 
-from thatway.conditions import ConditionFailure, is_positive
-from thatway.manager import SettingsManager
+from thatway.conditions import is_positive
+from thatway.exceptions import ConditionFailure
+from thatway.manager.manager import SettingsManager
 from thatway.setting import Setting
 
 

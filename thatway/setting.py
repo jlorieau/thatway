@@ -2,14 +2,11 @@
 
 from typing import Callable, Generic, TypeVar, cast, overload
 
-from .conditions import ConditionFailure, SupportsRichComparison
-from .manager import SettingsManager, settings
+from .conditions import SupportsRichComparison
+from .exceptions import ConditionFailure, SettingException
+from .manager.manager import SettingsManager, settings
 
 __all__ = ("Setting",)
-
-
-class SettingException(Exception):
-    """An exception raised from changing or retrieving a setting"""
 
 
 Instance = TypeVar("Instance")
@@ -43,6 +40,9 @@ class Setting(Generic[Value]):
         self.desc = desc
         self.conditions = conditions
         self.default = cast(Value, default)
+
+    def __repr__(self) -> str:
+        return f"Setting({self.name}={self.default})"
 
     def __set_name__(self, cls: type[Instance], name: str) -> None:
         """Called during descriptor creation on class creation with the given
@@ -142,7 +142,25 @@ class Setting(Generic[Value]):
         setattr(ns, keys[-1], self)
 
     def validate(self, value: Value) -> bool:
-        """Validate the given value and return True (valid) or False (invalid)"""
+        """Validate the given value and return True (valid) or False (invalid)
+
+        Parameters
+        ----------
+        value
+            The value to validate
+
+        Returns
+        -------
+        valid
+            True, if all conditions passed. False (or raised exception) if not.
+
+        Raises
+        ------
+        SettingException
+            Raised if a function is not a function
+        ConditionFailure
+            Raised when a condition fails to validate
+        """
         valid = True
 
         # Sort the callable and non-callable validators
