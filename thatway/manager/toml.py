@@ -23,12 +23,16 @@ def update_namespace(ns: SimpleNamespace, component: TOMLDocument | Table) -> No
 
     Parameters
     ----------
-
-    Returns
-    -------
+    ns
+        The settings manager namespace to update
+    component
+        The TOML document or table to retrieve values from
 
     Raises
     ------
+    SettingExpection
+        Raised when trying to set a setting that doesn't exist in the settings manager
+        namespace.
     """
 
     for k, v in component.items():
@@ -50,7 +54,21 @@ def update_namespace(ns: SimpleNamespace, component: TOMLDocument | Table) -> No
 
 
 def load_toml(fileobj: TextIO | Path, ns: SimpleNamespace | None = None) -> None:
-    """Load settings namespace from TOML"""
+    """Load settings namespace from TOML.
+
+    Parameters
+    ----------
+    fileobj
+        The file-like object or path to load the TOML data from
+    ns
+        The settings manager namespace to load settings into
+
+    Exceptions
+    ----------
+    SettingExpection
+        Raised when trying to set a setting that doesn't exist in the settings manager
+        namespace.
+    """
     ns = ns if ns is not None else settings
 
     if isinstance(fileobj, Path):
@@ -65,7 +83,20 @@ def load_toml(fileobj: TextIO | Path, ns: SimpleNamespace | None = None) -> None
 def build_toml(
     ns: SimpleNamespace, component: TOMLDocument | Table | None = None
 ) -> TOMLDocument | Table:
-    """Create a TOML document (or table) from the given namespace"""
+    """Create a TOML document (or table) from the given namespace.
+
+    Parameters
+    ----------
+    ns
+        The settings manager namespace to read settings from
+    component
+        The TOML document or table to create or modify with the settings from ns.
+
+    Returns
+    -------
+    document_or_table
+        The TOML document or table created or modified with the settings from ns.
+    """
     # Create a TOML document, if needed
     component = component if component is not None else document()
 
@@ -95,7 +126,15 @@ def build_toml(
 
 
 def save_toml(fileobj: TextIO | Path, ns: SimpleNamespace | None = None) -> None:
-    """Save settings to TOML"""
+    """Save settings to TOML.
+
+    Parameters
+    ----------
+    fileobj
+        The file-like object or path to load the TOML data from
+    ns
+        The settings manager namespace to read settings from
+    """
     ns = ns if ns is not None else settings
     document = build_toml(ns=ns)
 
