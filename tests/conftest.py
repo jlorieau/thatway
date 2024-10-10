@@ -3,8 +3,7 @@ from typing import Callable, Iterator
 
 import pytest
 
-from thatway.manager import SettingsManager, clear
-from thatway.manager import settings as s
+from thatway import Setting, SettingsManager, clear
 
 
 @pytest.fixture
@@ -25,5 +24,19 @@ def match_strings() -> Callable[[str, str], bool]:
 @pytest.fixture
 def settings() -> Iterator[SettingsManager]:
     """Retrieve and reset the settings object"""
-    clear(s)
-    yield s
+    manager = SettingsManager()
+    clear(manager)
+    yield manager
+
+
+@pytest.fixture
+def settings_set1(settings: SettingsManager) -> Iterator[SettingsManager]:
+    """Retrieve a settings object configure with data (set 1)"""
+
+    class TestClass:
+        attribute = Setting(3, "My attribute")
+        attribute2 = Setting("string", "A string")
+
+    settings.database_ip = Setting("128.0.0.1", "IP address of database")
+
+    yield settings
