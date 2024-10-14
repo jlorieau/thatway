@@ -9,16 +9,15 @@ __all__ = (
     "is_negative",
     "within",
     "allowed",
+    "SupportsRichComparison",
 )
 
-
-# Protocols
+# Definitions and Base Classes
 _T_contra = TypeVar("_T_contra", contravariant=True)
 
 
 class SupportsRichComparison(Protocol[_T_contra]):
     def __lt__(self, other: _T_contra, /) -> bool: ...
-
     def __gt__(self, other: _T_contra, /) -> bool: ...
 
 
