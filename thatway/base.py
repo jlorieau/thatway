@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from threading import Lock
 from types import SimpleNamespace
-from typing import Any, Callable, ClassVar, Generic, TypeVar, cast, overload
+from typing import Any, Callable, ClassVar, Generic, Iterator, TypeVar, cast, overload
 from weakref import ReferenceType, ref
 
 from .conditions import SupportsRichComparison
@@ -156,9 +156,13 @@ class Setting(Generic[Value], HierarchyMixin):
 
         Returns
         -------
-        1. The Setting, when called on a class--i.e. obj is None.
-        2. The value of the setting, if specified, or the default value, if called
-           from an instance of the class owning the descriptor.
+        (called from a class)
+        Return the descriptor (self)
+
+        (Called from an object/instance)
+        1. The value set on the instance, if available.
+        2. The setting value in the global settings manager.
+        3. The class's default value of the setting.
         """
         # Call from the class
         if obj is None:
@@ -305,6 +309,20 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
                     cls._instance = super().__new__(cls)
         return cls._instance
 
+    def __iter__(self) -> Iterator[Setting | SettingsManager]:
+        """An iterator of the settings and (non-empty) managers owned by this settings
+        manager."""
+        return (
+            i
+            for i in self.__dict__.values()
+            if isinstance(i, Setting) or isinstance(i, SettingsManager) and len(i) > 0
+        )
+
+    def __len__(self) -> int:
+        """The number of settings and (non-empy) managers owned by this settings
+        manager."""
+        return len(list(self.__iter__()))
+
     def __setattr__(self, name: str, value: Any) -> None:
         """Set a setting in the settings manager namespace."""
         # See if this is a class attribute or instance attribute
@@ -317,7 +335,7 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
         is_setting = isinstance(obj_attr, Setting)  # attribute is setting
         is_submanager = isinstance(obj_attr, SettingsManager)  # attribute is submanager
         is_empty_submanager = (
-            isinstance(obj_attr, SettingsManager) and len(obj_attr.settings) == 0
+            isinstance(obj_attr, SettingsManager) and len(obj_attr) == 0
         )
 
         # If it's a property, set it directly
@@ -328,8 +346,6 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
         if not has_obj_attr or is_empty_submanager:
             cp = copy.copy(value)  # shallow copy
             cp.parent = self
-
-            self.settings.add(name)
             return super().__setattr__(name, cp)
 
         # At this stage, the attribute could not be set. Create a customized exception
@@ -353,11 +369,6 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
             manager.parent = self
             self.__dict__[name] = manager
             return super().__getattribute__(name)
-
-    @property
-    def settings(self) -> set[str]:
-        """Listing of settings managed by this manager."""
-        return self.__dict__.setdefault("_settings", set())
 
 
 #: Utility functions for settings

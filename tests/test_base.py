@@ -2,8 +2,40 @@
 
 import pytest
 
-from thatway import ConditionFailure, Setting, SettingsManager
+from thatway import ConditionFailure, Setting, SettingException, SettingsManager
 from thatway.conditions import is_positive
+
+
+def test_setting_get(settings: SettingsManager) -> None:
+    """Test the accession order for a setting"""
+
+    # Create a class and an instance
+    class TestClass:
+
+        setting = Setting(1, "default setting")
+
+        def __init__(self) -> None:
+            self.setting = 3
+
+    test = TestClass()
+
+    # Change the global settings value
+    module_settings = getattr(settings, TestClass.__module__)
+    module_settings.TestClass.setting.value = 2  # type: ignore
+
+    # 1. Accessing from the class gives the descriptor
+    assert isinstance(TestClass.setting, Setting)
+
+    # 2. The instance value should be returned
+    assert test.setting == 3
+
+    # 3. If the instance value is not available, return the settings manager's value
+    del test.setting
+    assert test.setting == 2
+
+    # 4. If the global setting is not available, return the descriptor's default
+    del module_settings.TestClass.setting
+    assert test.setting == 1
 
 
 def test_setting_delete(settings: SettingsManager) -> None:
@@ -91,6 +123,76 @@ def test_setting_validate_change(settings: SettingsManager) -> None:
     test = Test()
     with pytest.raises(ConditionFailure):
         test.s = -3
+
+
+def test_settings_manager_new(settings: SettingsManager) -> None:
+    """Test the SettingsManager __new__ method and singleton behavior"""
+    assert id(SettingsManager()) == id(settings)  # same object
+    assert id(SettingsManager(base=False)) != id(settings)  # different object
+
+
+def test_settings_manager_iter(settings_set1: SettingsManager) -> None:
+    """Test the SettingsManager __iter__ and __len__ methods"""
+    settings = settings_set1
+
+    assert len(settings) == 2
+    assert settings.conftest in settings  # type: ignore
+    assert settings.database_ip in settings  # type: ignore
+
+    conftest = settings.conftest
+
+    assert len(conftest) == 1  # type: ignore
+    assert conftest.TestClass in conftest  # type: ignore
+
+    TestClass = conftest.TestClass  # type: ignore
+
+    assert len(TestClass) == 2  # type: ignore
+    assert TestClass.attribute in TestClass
+    assert TestClass.attribute2 in TestClass
+
+
+def test_settings_manager_set(settings: SettingsManager) -> None:
+    """Test the SettingsManager __set__ method"""
+
+    # Setting a new setting is allowed
+    class TestClass:
+        attribute = Setting(5, "a setting")
+
+    module_name = TestClass.__module__
+    module_settings = getattr(settings, module_name)
+    assert module_settings.TestClass.attribute.value == 5
+
+    # 1. Setting a new setting on a class is not allowed
+    with pytest.raises(SettingException):
+
+        class TestClass:  # type: ignore
+            attribute = Setting("new value", "a new value")
+
+    # 2. Setting a new setting on the setting manager is not allowed
+    with pytest.raises(SettingException):
+        module_settings.TestClass.attribute = Setting("new value", "a new valuel")
+
+    # 3. Changing a sub-manager to a setting is not allowed
+    with pytest.raises(SettingException):
+        module_settings.TestClass = Setting("new value", "a new valuel")
+
+
+def test_settings_manager_get(settings: SettingsManager) -> None:
+    """Test the SettingsManager __getattribute__ method."""
+    # Retrieve any attribute returns an empty setting
+    sub_manager = settings.sub
+    assert isinstance(sub_manager, SettingsManager)
+    assert len(sub_manager) == 0
+
+    # This sub-manager can be replaced as long as it's empty
+    settings.sub = Setting(5, "A setting")
+
+    # Replacing a sub-manager with a setting is not allowed
+    sub_manager2 = settings.sub2
+    sub_manager2.setting = Setting(5, "A setting")  # type: ignore
+
+    with pytest.raises(SettingException):
+        settings.sub2 = Setting("new", "a new setting")
 
 
 def test_settings_manager_hierarchy(settings_set1: SettingsManager) -> None:
