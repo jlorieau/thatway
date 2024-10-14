@@ -13,7 +13,6 @@ __all__ = (
     "ConditionFailure",
     "Setting",
     "SettingsManager",
-    "clear",
 )
 
 # Definitions and Base Classes
@@ -359,7 +358,7 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
 
         raise SettingException(msg)
 
-    def __getattribute__(self, name: str) -> Setting | SimpleNamespace:
+    def __getattribute__(self, name: str) -> Setting | SettingsManager:
         """Return the setting or a new sub-namespace of settings"""
         try:
             return super().__getattribute__(name)
@@ -369,12 +368,3 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
             manager.parent = self
             self.__dict__[name] = manager
             return super().__getattribute__(name)
-
-
-#: Utility functions for settings
-
-
-def clear(manager: SettingsManager | None = None) -> None:
-    """Clear settings entries in the namespace"""
-    manager = manager if manager is not None else SettingsManager()
-    manager.__dict__.clear()
