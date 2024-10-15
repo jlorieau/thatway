@@ -3,10 +3,11 @@ Test SettingsManager io functions.
 """
 
 from pathlib import Path
+from typing import Callable
 
 import pytest
 
-from thatway import Setting, SettingException, SettingsManager, load_toml
+from thatway import Setting, SettingException, SettingsManager, load_toml, save_toml
 
 
 def test_settings_manager_load_toml(settings: SettingsManager, tmp_path: Path) -> None:
@@ -56,3 +57,33 @@ def test_settings_manager_load_toml_missing(
     # Loading setting will raise an exception because the setting doesn't exist
     with pytest.raises(SettingException):
         load_toml(tmp_toml, settings)
+
+
+def test_settings_manager_save_toml(
+    settings: SettingsManager, tmp_path: Path, match_strings: Callable[[str, str], bool]
+) -> None:
+    """Test the SettingsManager save_toml function"""
+    tmp_toml = tmp_path / "test.toml"
+    tmp_toml.touch()
+
+    # Create some settings
+    class TestClass:
+        attribute = Setting(3, "My attribute")
+        attribute2 = Setting("string", "A string")
+
+    settings.database_ip = Setting("128.0.0.1", "IP address of database")
+
+    # Save to toml format
+    save_toml(tmp_toml, settings)
+
+    # Check the saved file
+    module_name = TestClass.__module__
+    key = f"""
+    database_ip = "128.0.0.1" # IP address of database
+    [{module_name}.TestClass]
+    attribute = 3 # My attribute
+    attribute2 = "string" # A string
+    """
+    toml = tmp_toml.read_text()
+
+    assert match_strings(toml, key)
