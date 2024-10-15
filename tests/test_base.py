@@ -43,7 +43,7 @@ def test_setting_delete(settings: SettingsManager) -> None:
 
     # 1. Try a setting owned by a class
     class Test:
-        s = Setting("t", desc="A string")
+        s = Setting("t", "A string")
 
         def __init__(self) -> None:
             self.s = "new string"
@@ -69,7 +69,7 @@ def test_setting_insert(settings: SettingsManager) -> None:
 
     # 1. Try a setting owned by a class
     class Test:
-        s = Setting("t", desc="A string")
+        s = Setting("t", "A string")
 
         def __init__(self) -> None:
             self.s = "new string"
@@ -89,10 +89,19 @@ def test_setting_insert(settings: SettingsManager) -> None:
 def test_setting_validate_cls_creation(settings: SettingsManager) -> None:
     """Test the :cls:`Setting` :meth:`validate` method for class creation"""
 
+    # Invalid value for the setting
     with pytest.raises(ConditionFailure):
 
         class Test:
+
             s = Setting(-3, "An int", is_positive)
+
+    # Invalid value for the setting (without description)
+    with pytest.raises(ConditionFailure):
+
+        class Test2:
+
+            s = Setting(-3, is_positive)
 
 
 def test_setting_validate_instantiation(settings: SettingsManager) -> None:

@@ -97,24 +97,31 @@ class Setting(Generic[Value], HierarchyMixin):
     def __init__(
         self,
         value: Value,
-        desc: str,
-        *conditions: Callable[[Value | SupportsRichComparison], bool],
+        *opts: str | Callable[[Value | SupportsRichComparison], bool],
     ) -> None:
         """Construct a Setting instance.
 
         Parameters
         ----------
-        default
-            The default value to use for the setting. This may be overwritten when
-            loading settings
-        desc
-            The string description of the setting.
-        *conditions
-            A listing of functions that take a setting value and checks whether it's
-            valid for this setting
+        value
+            The default value to use for the setting. This may be overwritten by
+            the base SettingsManager or from the class instance
+        *opts
+            Optional arguments to modify the setting's behavior
+
+
+            - desc (str). The string description of the setting.
+
+            - conditions (callable). A listing of functions that take a setting value
+              and checks whether it's valid for this setting
         """
-        self.desc = desc
-        self.conditions = conditions
+        # Parse the opts
+        str_opts = tuple(o for o in opts if isinstance(o, str))
+        callable_opts = tuple(o for o in opts if callable(o))
+
+        # Assign the description from the kwarg first, then from the (*opts)
+        self.desc = str_opts[0] if str_opts else ""
+        self.conditions = callable_opts
         self.value = cast(Value, value)  # After the conditions are set to validate
 
     def __repr__(self) -> str:
