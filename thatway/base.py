@@ -322,7 +322,7 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
         manager."""
         return len(list(self.__iter__()))
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    def __setattr__(self, name: str, value: Setting | SettingsManager) -> None:
         """Set a setting in the settings manager namespace."""
         # See if this is a class attribute or instance attribute
         cls_attr = getattr(SettingsManager, name, None)
@@ -340,6 +340,12 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
         # If it's a property, set it directly
         if has_cls_property:
             return super().__setattr__(name, value)
+
+        # Check that the value is either a Setting or a SettingsManager
+        if not isinstance(value, Setting | SettingsManager):
+            raise AttributeError(
+                f"Cannot insert value of type '{type(value)}' in a SettingsManager."
+            )
 
         # Only replace missing attributes or empty submanagers
         if not has_obj_attr or is_empty_submanager:
