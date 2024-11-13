@@ -2,7 +2,10 @@
 SettingsManager I/O methods
 """
 
+from enum import Enum, auto
+from io import IOBase, TextIOBase
 from pathlib import Path
+from typing import IO
 
 from tomlkit import TOMLDocument, document
 from tomlkit import dump as _dump_toml
@@ -12,11 +15,74 @@ from tomlkit.items import Item, Table
 
 from .base import Setting, SettingException, SettingsManager
 
-__all__ = ("load_toml", "save_toml")
+__all__ = ("load", "save")
+
+
+class FileType(Enum):
+    """Setting input/output filetyoes."""
+
+    AUTO = auto()
+    TOML = auto()
+
+
+def load(
+    filepath: Path,
+    settings: SettingsManager | None = None,
+    filetype: FileType = FileType.AUTO,
+) -> None:
+    """Load settings.
+
+    Parameters
+    ----------
+    filepath
+        The path to load settings from.
+    settings
+        The settings manager to save. The global settings manager is loaded, if None
+        is specified.
+    filetype
+        The format (type) of data in the settings file. If "AUTO", then the type
+        will be inferred from the filepath extension.
+    """
+    settings = settings if settings is not None else SettingsManager()
+
+    # Determine the filetype
+    if filetype is FileType.TOML or FileType.AUTO and filepath.suffix in (".toml",):
+        with filepath.open(mode="r") as stream:
+            load_toml(stream, settings=settings)
+    else:
+        raise NotImplementedError
+
+
+def save(
+    filepath: Path,
+    settings: SettingsManager | None = None,
+    filetype: FileType = FileType.AUTO,
+) -> None:
+    """Save settings.
+
+    Parameters
+    ----------
+    filepath
+        The path to save settings to.
+    settings
+        The settings manager to save. The global settings manager is loaded, if None
+        is specified.
+    filetype
+        The format (type) of data in the settings file. If "AUTO", then the type
+        will be inferred from the filepath extension.
+    """
+    settings = settings if settings is not None else SettingsManager()
+
+    # Determine the filetype
+    if filetype is FileType.TOML or FileType.AUTO and filepath.suffix in (".toml",):
+        with filepath.open(mode="w") as stream:
+            save_toml(stream, settings=settings)
+    else:
+        raise NotImplementedError
 
 
 def load_toml(
-    input: Path | TOMLDocument | Table, settings: SettingsManager | None = None
+    input: IO[str] | TOMLDocument | Table, settings: SettingsManager | None = None
 ) -> None:
     """Load settings namespace from TOML.
 
@@ -37,11 +103,9 @@ def load_toml(
     """
     settings = settings if settings is not None else SettingsManager()
 
-    if isinstance(input, Path):
-
-        with input.open(mode="r") as f:
-            document = _load_toml(f)
-            return load_toml(document, settings)
+    if isinstance(input, IOBase):
+        document = _load_toml(input)
+        return load_toml(document, settings)
 
     elif isinstance(input, TOMLDocument | Table):
 
@@ -71,7 +135,7 @@ def load_toml(
 
 
 def save_toml(
-    output: Path | TOMLDocument | Table, settings: SettingsManager | None = None
+    output: IO[str] | TOMLDocument | Table, settings: SettingsManager | None = None
 ) -> None:
     """Save settings to TOML.
 
@@ -84,7 +148,7 @@ def save_toml(
     """
     settings = settings if settings is not None else SettingsManager()
 
-    if isinstance(output, Path):
+    if isinstance(output, IOBase):
         # Create the TOML document and save to the given path
         doc = document()
 
@@ -92,8 +156,7 @@ def save_toml(
         save_toml(doc, settings)
 
         # Open the file path, and write the given document
-        with output.open(mode="w") as f:
-            _dump_toml(doc, f)
+        _dump_toml(doc, output)
 
     elif isinstance(output, TOMLDocument | Table):
 

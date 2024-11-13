@@ -7,7 +7,7 @@ from typing import Callable
 
 import pytest
 
-from thatway import Setting, SettingException, SettingsManager, load_toml, save_toml
+from thatway import Setting, SettingException, SettingsManager, load, save
 
 
 def test_settings_manager_load_toml(settings: SettingsManager, tmp_path: Path) -> None:
@@ -35,7 +35,7 @@ def test_settings_manager_load_toml(settings: SettingsManager, tmp_path: Path) -
     )
 
     # Load and check settings
-    load_toml(tmp_toml, settings)
+    load(tmp_toml, settings)
 
     module_settings = getattr(settings, module_name)
 
@@ -56,7 +56,7 @@ def test_settings_manager_load_toml_missing(
 
     # Loading setting will raise an exception because the setting doesn't exist
     with pytest.raises(SettingException):
-        load_toml(tmp_toml, settings)
+        load(tmp_toml, settings)
 
 
 def test_settings_manager_save_toml(
@@ -74,7 +74,7 @@ def test_settings_manager_save_toml(
     settings.database_ip = Setting("128.0.0.1", "IP address of database")
 
     # Save to toml format
-    save_toml(tmp_toml, settings)
+    save(tmp_toml, settings)
 
     # Check the saved file
     module_name = TestClass.__module__
