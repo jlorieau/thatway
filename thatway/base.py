@@ -315,6 +315,25 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
                     cls._instance = super().__new__(cls)
         return cls._instance
 
+    def __repr__(self, level: int = 0, spacer: str = "  ") -> str:
+        name = self.name
+
+        is_root = False if name else True  # Is this the root SettingsManager?
+        next_level = level + 1 if not is_root else level  # Calculate next spacing level
+
+        header = f"{spacer * level}{self.name}\n" if not is_root else ""
+        subitems = []
+
+        for item in self:
+            if isinstance(item, Setting):
+                subitems.append(f"{spacer * next_level}{item}")
+            elif isinstance(item, SettingsManager):
+                subitems.append(item.__repr__(next_level, spacer))
+            else:
+                continue
+
+        return header + "\n".join(subitems)
+
     def __iter__(self) -> Iterator[Setting | SettingsManager]:
         """An iterator of the settings and (non-empty) managers owned by this settings
         manager."""
