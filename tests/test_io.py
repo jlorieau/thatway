@@ -7,7 +7,26 @@ from typing import Callable
 
 import pytest
 
-from thatway import Setting, SettingException, SettingsManager, load, save
+from thatway import Setting, SettingException, SettingsManager, load, pprint, save
+
+
+def test_settings_manager_pprint(
+    settings_set1: SettingsManager,
+    match_strings: Callable[[str, str], bool],
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """Test the pretty-print functionality"""
+    pprint(settings_set1)
+
+    stdout = capsys.readouterr().out
+    key = """
+    database_ip = "128.0.0.1" # IP address of database
+    [conftest.TestClass]
+    attribute = 3 # My attribute
+    attribute2 = "string" # A string
+    """
+
+    assert match_strings(stdout, key)
 
 
 def test_settings_manager_load_toml(settings: SettingsManager, tmp_path: Path) -> None:

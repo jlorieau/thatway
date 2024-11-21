@@ -3,7 +3,7 @@ SettingsManager I/O methods
 """
 
 from enum import Enum, auto
-from io import IOBase, TextIOBase
+from io import IOBase, StringIO
 from pathlib import Path
 from typing import IO
 
@@ -15,7 +15,7 @@ from tomlkit.items import Item, Table
 
 from .base import Setting, SettingException, SettingsManager
 
-__all__ = ("load", "save")
+__all__ = ("load", "save", "pprint", "FileType")
 
 
 class FileType(Enum):
@@ -77,6 +77,35 @@ def save(
     if filetype is FileType.TOML or FileType.AUTO and filepath.suffix in (".toml",):
         with filepath.open(mode="w") as stream:
             save_toml(stream, settings=settings)
+    else:
+        raise NotImplementedError
+
+
+def pprint(
+    settings: SettingsManager | None = None,
+    filetype: FileType = FileType.TOML,
+) -> None:
+    """Pretty-print settings.
+
+    Parameters
+    ----------
+    filepath
+        The path to save settings to.
+    settings
+        The settings manager to save. The global settings manager is loaded, if None
+        is specified.
+    filetype
+        The format (type) of data in the settings file. If "AUTO", then the type
+        will be inferred from the filepath extension.
+    """
+    settings = settings if settings is not None else SettingsManager()
+
+    # Determine the filetype
+    if filetype is FileType.TOML:
+        with StringIO() as stream:
+            save_toml(stream, settings=settings)
+            stream.seek(0)  # set the pointer to the start of the buffer
+            print(stream.read())
     else:
         raise NotImplementedError
 
