@@ -46,10 +46,11 @@ exclude = [
 
 # Testing settings
 [tool.pytest.ini_options]
-addopts = "--doctest-modules --doctest-glob='*.rst'"
+addopts = "--doctest-modules --doctest-glob='*.md'"
 testpaths = [
   "tests",
-  "src"  # doctests
+  "src",  # doctests
+  "README.md"
   ]
 
 # Hatch environments

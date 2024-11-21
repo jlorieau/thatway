@@ -3,81 +3,118 @@ ThatWay
 [![PyPI version](https://img.shields.io/pypi/v/thatway.svg)](https://pypi.org/project/thatway/)
 [![Black formatted](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Thatway is a simple, decentralized configuration manager.
 
-Place your configuration settings throughout your application--not in a
-centralized file or submodule--and thatway collects them and allows you to
-modify them through configurations files. Decentralized configuration reduces
-the complexity of submodules and the coupling between submodules.
+Loads of settings and configuration managers exist, but none make it easy to pepper your python files with settings and have them collected in one place. Thatway was created for this purpose.
+
+```python
+>>> from thatway import Setting
+>>>
+>>> class FirstClass:
+...     my_attribute = Setting(True)
+...     max_instances = Setting(3, "Maximum number of instances")
+
+```
+
+Thatway is a decentralized yet simple settings (configuration) manager. Place your settings throughout your application--not in a centralized file or submodule--and thatway collects them and allows you to modify them through configurations files. Decentralized configuration reduces the complexity of submodules and the coupling between submodules.
 
 Quickstart
 ----------
 
-1. Create a package with settings.
+1. **Create settings**
 
-    [examples/mypkg/moduleA/file.py](examples/mypkg/moduleA/file.py)
+   as class members
+
+      ```python
+      >>> from thatway import Setting    
+      >>> class SecondClass:
+      ...     my_attribute = Setting(True)
+      ...     max_instances = Setting(3, "Maximum number of instances")
+
+      ```
+
+   as independent settings
+
+      ```python
+      >>> from thatway import settings, Setting
+      >>>
+      >>> settings.moduleB.msg = Setting("This is my message")
+
+      ```
+
+2. **Enforce conditions** (optionally)
+
+   ```python
+   >>> from thatway import Setting
+   >>> from thatway.conditions import is_positive, lesser_than, within, allowed
+   >>>
+   >>> class Display:
+   ...     width = Setting(768, "Screen width", 
+   ...                     is_positive,
+   ...                     lesser_than(2045))
+   ...     height = Setting(1024, "Screen height",
+   ...                      is_positive, 
+   ...                      within(1023, 4096))
+   ...     dpi = Setting(144, "Screen dots-per-inch",
+   ...                   allowed(90, 120, 144, 160)) 
+
+   ```
+
+   | Function            | Description                         |
+   |---------------------|-------------------------------------|
+   | `is_positive`       | Value is greater than zero.  `int`, `float` and `double` |
+   | `is_negative`       | Value is smaller than zero. `int`, `float` and `double` |
+   | `greater_than(low)` | Value is greater than `low` bound |
+   | `lesser_than(high)` | Value is smaller than `high` bound |
+   | `within(low, high)` | Value is greater than `low` bound and smaller than `high` bound. |
+   | `allowed(*values)`  | Value is one of the specified `*values` |
+
+3. **Load and save settings**
+
+   Load and save settings in [TOML](https://toml.io/en/) format.
+
+    
+
     ```python
-    from thatway import Setting
-    
-    
-    class FirstClass:
-        my_attribute = Setting(True, desc="Whether 'my_attribute' is an attribute")
-    
-        max_instances = Setting(3, desc="Maximum number of instances")
+    >>> from thatway import Setting, settings, load, FileType
+    >>> from tempfile import NamedTemporaryFile
+    >>> from pathlib import Path
+    ...
+    >>> class ThirdClass:  # create some settings
+    ...     attribute = Setting(1, "An attribute")
+    ...
+    >>> ThirdClass().attribute
+    1
+    >>> with NamedTemporaryFile(mode='w') as tp:  # load these settings from a file
+    ...     toml = """
+    ...     [__main__.ThirdClass]
+    ...     attribute = 2"""
+    ...     _ = tp.write(toml)
+    ...     tp.flush()
+    ...     load(Path(tp.name), settings, FileType.TOML)
+    ...
+    >>> ThirdClass().attribute
+    2
+
     ```
 
-    [examples/mypkg/moduleB/file.py](examples/mypkg/moduleB/file.py>)
-    ```python
-    from thatway import config, Setting
-    
-    config.moduleB.msg = Setting("This is my message")
-    ```
-
-2. View settings:
-
-    ```python
-    import examples.mypkg
-    from thatway import config
-    
-    print(config.dumps_yaml())
-    ```
-
-    ```yaml
-    FirstClass:
-      my_attribute: true  # Whether 'my_attribute' is an antribue
-      max_instances: 3  # Maximum number of instances
-    moduleB:
-      msg: This is my message
-    ```
-
-3. Load different settings:
-
-    [examples/mypkg/new_settings.yaml](examples/mypkg/new_settings.yaml)
-
-    ```yaml
-    
-    FirstClass:
-      my_attribute: false
-      max_instances: 2
-    ```
-
-    with python:
+3. **View settings**
 
     ```python
-    from pathlib import Path
-    import examples.mypkg
-    from thatway import config
+    >>> from thatway import Setting, settings, clear
+    >>> from thatway.conditions import is_positive
+    ...
+    >>> clear(settings)  # clear existing settings
+    >>> class Search:
+    ...     text = Setting("type search here...", "Search text")
+    ...     max_characters = Setting(1024, "Maximum allowed characters", is_positive)
+    >>> settings.database_ip = Setting("128.0.0.1", "IP address for the database connection")
+    >>> print(settings)
+    __main__
+      Search
+        Setting(text=type search here...)
+        Setting(max_characters=1024)
+    Setting(database_ip=128.0.0.1)
     
-    config.load_yaml(str(Path("examples") / "mypkg" / "new_settings.yaml"))
-    print(config.dumps_yaml())
-    ```
-
-    ```yaml
-    FirstClass:
-      my_attribute: false  # Whether 'my_attribute' is an antribue
-      max_instances: 2  # Maximum number of instances
-    moduleB:
-      msg: This is my message
     ```
 
 Rules
@@ -92,23 +129,25 @@ manager.
     Settings can be set directly on the config object.
 
     ```python
-    >>> from thatway import config, Setting
-    >>> config.a = Setting(3)
-    >>> config.a
+    >>> from thatway import settings, Setting
+    >>> settings.a = Setting(3)
+    >>> settings.a.value
     3
-    >>> config.nested.b = Setting("nested")
-    >>> config.nested.b
+    >>> settings.nested.b = Setting("nested")
+    >>> settings.nested.b.value
     'nested'
+
     ```
 
     Trying to set an entry in the config without a setting raises an exception.
 
     ```python
-    >>> from thatway import config
-    >>> config.new_value = 3
+    >>> from thatway import settings
+    >>> settings.new_value = 3
     Traceback (most recent call last):
     ...
-    thatway.base.ConfigException: Only Settings can be inserted in the Config
+    AttributeError: Cannot insert value of type '<class 'int'>' in a SettingsManager.
+
     ```
 
 2. Configure object attributes
@@ -122,6 +161,7 @@ manager.
     >>> obj = Obj()
     >>> obj.attribute
     'my value'
+
     ```
 
 3. Configuration locking
@@ -131,19 +171,19 @@ manager.
 
     ```python
     >>> from thatway import Setting
-    >>> config.b = Setting(3)
-    >>> config.b
+    >>> settings.b = Setting(3)
+    >>> settings.b
     3
-    >>> config.b = Setting(5)  # oops!
+    >>> settings.b = Setting(5)  # oops!
     Traceback (most recent call last):
     ...
     thatway.base.ConfigException: Entry 'b' already in the Config--use a Config.update or load method to change its value.
-    >>> config.b = 5  # oops!
+    >>> settings.b = 5  # oops!
     Traceback (most recent call last):
     ...
     thatway.base.ConfigException: Only Settings can be inserted in the Config
-    >>> config.update({'b': 5})
-    >>> config.b
+    >>> settings.update({'b': 5})
+    >>> settings.b
     5
     ```
 
