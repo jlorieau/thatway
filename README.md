@@ -16,7 +16,6 @@ Using Thatway is as easy as adding settings attributes to a class:
 >>> class FirstClass:
 ...     my_attribute = Setting(True)
 ...     max_instances = Setting(3, "Maximum number of instances")
-
 ```
 
 ## Quickstart
@@ -31,7 +30,6 @@ as class members
   >>> class SecondClass:
   ...     my_attribute = Setting(True)
   ...     max_instances = Setting(3, "Maximum number of instances")
-
   ```
 
 as independent settings
@@ -39,7 +37,6 @@ as independent settings
   ```python
   >>> from thatway import settings
   >>> settings.moduleB.msg = Setting("This is my message")
-
   ```
 
 ### 2. Enforce Conditions (optionally)
@@ -55,7 +52,6 @@ as independent settings
 ...                      within(1023, 4096))
 ...     dpi = Setting(144, "Screen dots-per-inch",
 ...                   allowed(90, 120, 144, 160)) 
-
 ```
 
 Conditions are any callable that takes a value
@@ -96,7 +92,6 @@ Load and save settings in [TOML](https://toml.io/en/) format.
 ...
 >>> ThirdClass().attribute
 2
-
 ```
 
 ### 4. View settings
@@ -114,7 +109,6 @@ __main__
     Setting(text=type search here...)
     Setting(max_characters=1024)
 Setting(database_ip=128.0.0.1)
-
 ```
 
 ## Rules
@@ -136,7 +130,6 @@ Setting values come from 3 different sources, in order of decreasing precedence:
 >>> instance.attribute = 1  # Set an instance value
 >>> instance.attribute
 1
-
 ```
 
 (2) The setting manager's value
@@ -148,7 +141,6 @@ Setting values come from 3 different sources, in order of decreasing precedence:
 >>> instance = PrecedenceB()
 >>> instance.attribute
 2
-
 ```
 
 (3) The default value set on creation of the setting.
@@ -159,7 +151,6 @@ Setting values come from 3 different sources, in order of decreasing precedence:
 >>> instance = PrecedenceC()
 >>> instance.attribute
 3
-
 ```
 
 ### 2. Settings Locking
@@ -177,7 +168,6 @@ Setting(b=3)
 Traceback (most recent call last):
 ...
 thatway.base.SettingException: Attribute 'b' already exists as a Setting (Setting(b=3))
-
 ```
 
 (2) or replacing a setting with a non-setting.
@@ -195,7 +185,6 @@ but the value of the setting can be updated, as long as it's valid--i.e. it pass
 >>> settings.b.value = 5
 >>> settings.b
 Setting(b=5)
-
 ```
 
 ### 3. Type Enforcement

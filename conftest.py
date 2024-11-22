@@ -1,4 +1,5 @@
 import re
+from doctest import DocTestRunner
 from typing import Callable, Iterator
 
 import pytest
@@ -40,3 +41,21 @@ def settings_set1(settings: SettingsManager) -> Iterator[SettingsManager]:
     settings.database_ip = Setting("128.0.0.1", "IP address of database")
 
     yield settings
+
+
+# Modify the doctest runner to strip backticks from the end of the doctest string.
+# This is needed to remove code blocks with doctests in Markdown files.
+
+orig_run = DocTestRunner.run
+
+
+def run(self, test, *args, **kwargs):
+    for example in test.examples:
+        # Remove ```
+        example.want = example.want.replace("```\n", "")
+        example.exc_msg = example.exc_msg and example.exc_msg.replace("```\n", "")
+
+    return orig_run(self, test, *args, **kwargs)
+
+
+DocTestRunner.run = run
