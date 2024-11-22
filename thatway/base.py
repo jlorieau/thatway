@@ -289,10 +289,6 @@ class Setting(Generic[Value], HierarchyMixin):
 class SettingsManager(HierarchyMixin, SimpleNamespace):
     """The settings namespace manager"""
 
-    #: An internal listing of Setting and SettingsManager instances managed by this
-    #: manager
-    _settings: set[str]
-
     #: The settings manager singleton
     _instance: ClassVar[SettingsManager | None] = None
 
