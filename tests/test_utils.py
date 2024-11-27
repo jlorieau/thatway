@@ -1,6 +1,6 @@
 """Tests for utility functions"""
 
-from thatway import Setting, SettingsManager, clear
+from thatway import Setting, SettingsManager, clear, locate
 
 
 def test_settings_manager_clear(settings: SettingsManager) -> None:
@@ -18,3 +18,13 @@ def test_settings_manager_clear(settings: SettingsManager) -> None:
     assert len(settings) == 0
     assert not isinstance(settings.sub.value1, Setting)
     assert not isinstance(settings.value2, Setting)
+
+
+def test_settings_manager_locate(settings_set1: SettingsManager) -> None:
+    """Test the SettingsManager location function"""
+    locations = locate(settings_set1)
+
+    assert len(locations) == 1
+    filename = list(locations.keys())[0]
+    assert filename.endswith("conftest.py")
+    assert len(locations[filename]) == 3  # There are 3 settings in settings_set1

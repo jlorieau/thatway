@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import inspect
 from threading import Lock
 from types import SimpleNamespace
 from typing import Any, Callable, ClassVar, Generic, Iterator, TypeVar, cast, overload
@@ -91,6 +92,9 @@ class Setting(Generic[Value], HierarchyMixin):
     #: values
     conditions: tuple[Callable[[Value | SupportsRichComparison], bool], ...]
 
+    #: The location (filename, line no) in which the setting was created
+    __location__: tuple[str, int]
+
     #: Setting attribute name for the instance of the class that owns this descriptor
     _setting_attribute: ClassVar[str] = "__instance_settings__"
 
@@ -123,6 +127,10 @@ class Setting(Generic[Value], HierarchyMixin):
         self.desc = str_opts[0] if str_opts else ""
         self.conditions = callable_opts
         self.value = cast(Value, value)  # After the conditions are set to validate
+
+        # Add meta information on where this object was instantiated
+        stack_trace = inspect.stack()
+        self.__location__ = (stack_trace[1][1], stack_trace[1][2])
 
     def __repr__(self) -> str:
         name = getattr(self, "name", "")
