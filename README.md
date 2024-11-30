@@ -6,9 +6,9 @@
 
 Many settings and configuration managers exist. Most, if not all, require settings to be placed in a centralized place in your project, introducing couplings between sub-modules and separating settings from the places they're used. 
 
-Thatway was created to make it easy to pepper your python files with settings and have them automatically collected in one place. Settings can have optional descriptions and validated with arbitrary conditions, and settings can be updated from files.
+Thatway was created to make it easy to pepper your python files with settings and have them automatically collected. Settings can have optional descriptions and validated with arbitrary conditions, and settings can be updated from files.
 
-Using Thatway is as easy as adding settings attributes to a class:
+Using Thatway is as easy as adding settings attributes or setting a variable.
 
 ```python
 >>> from thatway import Setting
@@ -226,4 +226,14 @@ the validation conditions.
 >>> settings.b.value = 5
 >>> settings.b
 Setting(b=5)
+```
+
+### 3. Type Annotations
+
+The types of settings are set by the types used for the setting.
+
+```python
+>>> class TypeClassExample:
+...     attribute_1: Setting[int] = Setting(3, "An int attribute")
+...     attribute_2: Setting[str] = Setting("here!", "An int attribute")
 ```
