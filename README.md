@@ -23,23 +23,48 @@ Using Thatway is as easy as adding settings attributes to a class:
 
 ### 1. Create Settings
 
-as class members
+Create settings as class members, with or without a description...
 
-  ```python
-  >>> from thatway import Setting    
-  >>> class SecondClass:
-  ...     my_attribute = Setting(True)
-  ...     max_instances = Setting(3, "Maximum number of instances")
-  ```
+```python
+>>> from thatway import Setting    
+>>> class SecondClass:
+...     my_attribute = Setting(True)  # without description
+...     max_instances = Setting(3, "Maximum number of instances")  # with description
+```
 
-as independent settings
+or as independent settings not associated with a class,
 
-  ```python
-  >>> from thatway import settings
-  >>> settings.moduleB.msg = Setting("This is my message")
-  ```
+```python
+>>> database_ip = Setting("127.0.0.1")
+```
+
+
+or assign them to the settings manager direccly.
+
+```python
+>>> from thatway import settings
+>>> settings.moduleB.msg = Setting("This is my message")
+```
+
+Then setting are collected in a global `settings` manager.
+
+```python
+>>> print(settings)
+__main__
+  FirstClass
+    Setting(my_attribute=True)
+    Setting(max_instances=3)
+  SecondClass
+    Setting(my_attribute=True)
+    Setting(max_instances=3)
+moduleB
+  Setting(msg=This is my message)
+```
 
 ### 2. Enforce Conditions (optionally)
+
+Settings can have a series of conditions that must pass in order to replace the
+value of the setting.
 
 ```python
 >>> from thatway.conditions import is_positive, lesser_than, within, allowed
@@ -55,7 +80,8 @@ as independent settings
 ```
 
 Conditions are any callable that takes a value
-and returns a bool to indicate whether the value is valid (True) or invalid (False).
+and returns a bool to indicate whether the value is valid (True) or invalid (False):
+`Callable[[Any], bool]`
 
 Thatway comes with some simple conditions:
 
@@ -94,7 +120,9 @@ Load and save settings in [TOML](https://toml.io/en/) format.
 2
 ```
 
-### 4. View settings
+### 4. View and Locate Settings
+
+Settings manager objects can be view as a nested tree.
 
 ```python
 >>> from thatway import clear
@@ -109,6 +137,18 @@ __main__
     Setting(text=type search here...)
     Setting(max_characters=1024)
 Setting(database_ip=128.0.0.1)
+```
+
+The source code locations where individual settings can be revealed too.
+
+```python
+>>> from thatway import locate
+>>> from pprint import pprint
+>>> locations = locate(settings)
+>>> pprint(locations)
+{'<doctest README.md[19]>': {2: Setting(text=type search here...),
+                             3: Setting(max_characters=1024)},
+ '<doctest README.md[20]>': {1: Setting(database_ip=128.0.0.1)}}
 ```
 
 ## Rules
@@ -157,7 +197,7 @@ Setting values come from 3 different sources, in order of decreasing precedence:
 
 Settings cannot be accidentally modified.
 
-(1) Replacing a setting with a new setting is not possible:
+Replacing a setting with a new setting is not possible,
 
 ```python
 >>> from thatway import SettingException  
@@ -170,7 +210,7 @@ Traceback (most recent call last):
 thatway.base.SettingException: Attribute 'b' already exists as a Setting (Setting(b=3))
 ```
 
-(2) or replacing a setting with a non-setting.
+or replacing a setting with a non-setting.
 
 ```python
 >>> settings.b = 5  # oops! Can't assign a non-setting.
@@ -179,90 +219,11 @@ Traceback (most recent call last):
 AttributeError: Cannot insert value of type '<class 'int'>' in a SettingsManager.
 ```
 
-but the value of the setting can be updated, as long as it's valid--i.e. it passes the validation conditions.
+But the value of the setting can be updated, as long as it's valid--i.e. it passes 
+the validation conditions.
 
 ```python
 >>> settings.b.value = 5
 >>> settings.b
 Setting(b=5)
 ```
-
-### 3. Type Enforcement
-
-Setting types are checked and maintained with either the setting's value type.
-
-```python
->>> settings.c = Setting(5, "The value of c")
->>> settings.c.value = "A new type doesn't work!"
-'my new c value'
->>> settings.c.value = 6
->>> settings.c
-```
-
-6. Missing Settings
-
-    Trying to update a setting that doesn't exist is not possible. This behavior
-    is designed to avoid trying to change a setting but using an incorrect setting
-    name and location.
-
-    ```python
-    >>> from thatway import Setting
-    >>> config.update({'e': 'unassigned'})  # 'f' doesn't exist in config
-    Traceback (most recent call last):
-    ...
-    KeyError: "Tried assigning setting with name 'e' which does not exist in the Config"
-    ```
-
-7. Immutable Settings Values
-
-    Setting values can only be immutable objects.
-
-    ```python
-    >>> from thatway import Setting
-    >>> config.cli.color = Setting(True)
-    >>> config.cli.default_filenames = Setting(('a.html', 'b.html'))
-    >>> config.cli.value_list = Setting([1, 2])  # lists are mutable
-    Traceback (most recent call last):
-    ...
-    thatway.base.ConfigException: Setting value '[1, 2]' must be immutable
-    ```
-
-Features
---------
-
-1. Setting descriptions
-
-    Settings can include descriptions.
-
-    ```python
-    >>> from thatway import Setting
-    >>> config.e = Setting(4, desc="The 'e' attribute")
-    ```
-
-2. Yaml processing. Settings can be dumped in [yaml](https://yaml.org) with `config.dumps_yaml()`.
-
-    ```yaml
-    Obj:
-      a: 1
-    b: name  # The 'b' setting
-    nested:
-      c: true
-    ```
-
-    And [yaml](https://yaml.org) strings or files can be loaded with
-    `config.loads_yaml(string)` and `config.load_yaml(filepath)`, respectively.
-
-3. Toml processing
-
-    Settings can be dumped in [toml](https://toml.io/en/) with `config.dumps_toml()`.
-
-    ```toml
-    [Obj]
-      a = 1
-    b = "name"  # The 'b' setting
-    [nested]
-      c = true
-    ```
-
-    And [toml](https://toml.io/en/) strings or files can be loaded with
-    `config.loads_toml(string)` and `config.load_toml(filepath)`, respectively.

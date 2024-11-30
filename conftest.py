@@ -50,6 +50,10 @@ orig_run = DocTestRunner.run
 
 
 def run(self, test, *args, **kwargs):
+    # reset settings before running doctests
+    manager = SettingsManager()
+    clear(manager)
+
     for example in test.examples:
         # Remove ```
         example.want = example.want.replace("```\n", "")
