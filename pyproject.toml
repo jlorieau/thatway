@@ -13,12 +13,16 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Development Status :: 4 - Beta",
     ]
 dynamic = ["version"]
 dependencies = [
     "tomlkit>=0.13",  # Parsing toml
 ]
+
+[tool.hatch.version]
+path = "thatway/__init__.py"
 
 [tool.setuptools]
 packages = ["thatway"]
