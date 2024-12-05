@@ -330,7 +330,7 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
 
         for item in self:
             if isinstance(item, Setting):
-                subitems.append(f"{spacer * next_level}{item}")
+                subitems.append(f"{spacer * next_level}{item.name}={repr(item.value)}")
             elif isinstance(item, SettingsManager):
                 subitems.append(item.__repr__(next_level, spacer))
             else:

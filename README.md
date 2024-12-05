@@ -52,13 +52,13 @@ Then setting are collected in a global `settings` manager.
 >>> print(settings)
 __main__
   FirstClass
-    Setting(my_attribute=True)
-    Setting(max_instances=3)
+    my_attribute=True
+    max_instances=3
   SecondClass
-    Setting(my_attribute=True)
-    Setting(max_instances=3)
+    my_attribute=True
+    max_instances=3
 moduleB
-  Setting(msg=This is my message)
+  msg='This is my message'
 ```
 
 ### 2. Enforce Conditions (optionally)
@@ -134,9 +134,9 @@ Settings manager objects can be view as a nested tree.
 >>> print(settings)
 __main__
   Search
-    Setting(text=type search here...)
-    Setting(max_characters=1024)
-Setting(database_ip=128.0.0.1)
+    text='type search here...'
+    max_characters=1024
+database_ip='128.0.0.1'
 ```
 
 The source code locations where individual settings can be revealed too.
