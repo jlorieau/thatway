@@ -341,11 +341,9 @@ class SettingsManager(HierarchyMixin, SimpleNamespace):
     def __iter__(self) -> Iterator[Setting | SettingsManager]:
         """An iterator of the settings and (non-empty) managers owned by this settings
         manager."""
-        return (
-            i
-            for i in self.__dict__.values()
-            if isinstance(i, Setting) or isinstance(i, SettingsManager) and len(i) > 0
-        )
+        for i in self.__dict__.values():
+            if isinstance(i, Setting) or isinstance(i, SettingsManager) and len(i) > 0:
+                yield i
 
     def __len__(self) -> int:
         """The number of settings and (non-empy) managers owned by this settings
