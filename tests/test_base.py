@@ -1,274 +1,238 @@
-from thatway import Setting, ConfigException
+"""Tests for Setting and SettingsManager classes"""
 
 import pytest
 
+from thatway import ConditionFailure, Setting, SettingException, SettingsManager
+from thatway.conditions import is_positive
 
-def test_cls_attribute(config):
-    """Test the setting of a class attribute"""
 
-    class Obj:
-        a = Setting(value=3)
+def test_setting_get(settings: SettingsManager) -> None:
+    """Test the accession order for a setting"""
 
-    obj = Obj()
+    # Create a class and an instance
+    class TestClass:
 
-    assert Obj.a == 3
-    assert obj.a == 3
+        setting = Setting(1, "default setting")
 
-    assert config.Obj.a == 3
+        def __init__(self) -> None:
+            self.setting = 3
 
-    # Check the setting object
-    param_obj = config.__dict__["Obj"].__dict__["a"]
-    assert isinstance(param_obj, Setting)
+    test = TestClass()
 
+    # Change the global settings value
+    module_settings = getattr(settings, TestClass.__module__)
+    module_settings.TestClass.setting.value = 2  # type: ignore
 
-def test_cls_attribute_mutation(config):
-    """Test the mutating of a class attribute"""
+    # 1. Accessing from the class gives the descriptor
+    assert isinstance(TestClass.setting, Setting)
 
-    class Obj:
-        a = Setting(value=3)
+    # 2. The instance value should be returned
+    assert test.setting == 3
 
-    obj = Obj()
+    # 3. If the instance value is not available, return the settings manager's value
+    del test.setting
+    assert test.setting == 2
 
-    # Can't edit directly
-    with pytest.raises(ConfigException):
-        obj.a = 5
+    # 4. If the global setting is not available, return the descriptor's default
+    del module_settings.TestClass.setting
+    assert test.setting == 1
 
-    # NB: This statement check's the attribute's value, and it registers the attribute
-    # in the config--needed for the next test
-    assert obj.a == 3
 
-    # Can't edit the config value directly
-    with pytest.raises(ConfigException):
-        config.Obj.a = 5
+def test_setting_delete(settings: SettingsManager) -> None:
+    """Test the :cls:`Setting` :meth:`__delete` method"""
 
-    assert config.Obj.a == 3
+    # 1. Try a setting owned by a class
+    class Test:
+        s = Setting("t", "A string")
 
+        def __init__(self) -> None:
+            self.s = "new string"
 
-def test_direct_access(config):
-    """Test direct access to config"""
-    # Try at the root level
-    config.a = Setting("direct access")
-    assert config.a == "direct access"
-    assert "a" in config.__dict__
+    test = Test()
 
-    # Try at a nested level
-    config.nested.b = Setting("sub level")
-    assert config.nested.b == "sub level"
-    assert "b" in config.__dict__["nested"].__dict__
+    # The modified value is returned before delete
+    assert test.s == "new string"
 
-    # Directly setting values without a Setting is not allowed
-    with pytest.raises(ConfigException):
-        config.c = 3
+    # The default value is returned after a delete
+    del test.s
+    assert test.s == "t"
 
-    # Check the setting object
-    param_obj = config.__dict__["a"]
-    assert isinstance(param_obj, Setting)
+    # Deleting again raises an exception
+    with pytest.raises(AttributeError):
+        del test.s
 
+    assert test.s == "t"
 
-def test_direct_access_mutation(config):
-    """Test the mutating of a directly accessed config value"""
-    config.a = Setting("direct access")
-    config.nested.b = Setting("sub level")
 
-    # Modifying raises an exception
-    with pytest.raises(ConfigException):
-        config.a = Setting("new value")
+def test_setting_insert(settings: SettingsManager) -> None:
+    """Test the :cls:`Setting` :meth:`_insert` method."""
 
-    assert config.a == "direct access"
+    # 1. Try a setting owned by a class
+    class Test:
+        s = Setting("t", "A string")
 
-    with pytest.raises(ConfigException):
-        config.nested.b = Setting("new value")
+        def __init__(self) -> None:
+            self.s = "new string"
 
-    assert config.nested.b == "sub level"
+    # Retrieve the setting from the "settings" namespace
+    module = Test.__module__
+    module_settings = getattr(settings, module)  # Module exists
+    assert module_settings.Test.s.value == "t"
 
+    # 2. Try a class instance
+    test = Test()
 
-def test_overwrite(config):
-    """Test that settings cannot be overwritten in the config"""
+    assert test.s == "new string"
+    assert module_settings.Test.s.value == "t"
 
-    # 1. direct access
-    config.a = Setting(1)
 
-    with pytest.raises(ConfigException):
-        config.a = Setting(2)
+def test_setting_validate_cls_creation(settings: SettingsManager) -> None:
+    """Test the :cls:`Setting` :meth:`validate` method for class creation"""
 
-    assert config.a == 1
+    # Invalid value for the setting
+    with pytest.raises(ConditionFailure):
 
-    # 2. instance attribute
-    class Obj:
-        b = Setting(3)
+        class Test:
 
-    obj = Obj()
+            s = Setting(-3, "An int", is_positive)
 
-    with pytest.raises(ConfigException):
-        obj.b = 4
+    # Invalid value for the setting (without description)
+    with pytest.raises(ConditionFailure):
 
-    assert obj.b == 3
+        class Test2:
 
-    # 3. class attribute. These can be overwritten because the descriptor can
-    # be replaced.
-    # see: https://docs.python.org/3/reference/datamodel.html#object.__set__
-    Obj.b = 4
-    assert Obj.b == 4
-    assert isinstance(Obj.__dict__["b"], int)  # not a setting anymore
+            s = Setting(-3, is_positive)
 
 
-def test_setting_immutability(config):
-    """Test that Setting values can only be immutables"""
-    # Immutable objects
-    for obj in (1, "a", (1, 2), True, None):
-        Setting(obj)
+def test_setting_validate_instantiation(settings: SettingsManager) -> None:
+    """Test the :cls:`Setting` :meth:`validate` method for class instantiation"""
 
-    # Mutable objects
-    for obj in ({1, 2}, [1, 2], {"a": 1}):
-        with pytest.raises(ConfigException):
-            Setting(obj)
+    class Test:
+        s = Setting(3, "An int", is_positive)
 
+        def __init__(self) -> None:
+            self.s = -3
 
-def test_config_method_overwrite(config):
-    """Test overwriting a config method."""
-    with pytest.raises(ConfigException):
-        config.update = Setting(3)
+    with pytest.raises(ConditionFailure):
+        Test()
 
 
-def test_config_update(config):
-    """Test the config.update method"""
-    config.a = Setting(1)
-    config.nested.b = Setting(2)
+def test_setting_validate_change(settings: SettingsManager) -> None:
+    """Test the :cls:`Setting` :meth:`validate` method for class and instance setting
+    change"""
 
-    # Updating allows overwrites
-    config.update({"a": 3, "nested": {"b": 4}})
+    class Test:
+        s = Setting(3, "An int", is_positive)
 
-    assert config.a == 3
-    assert config.nested.b == 4
+    # Changing the default to an invalid value doesn't work
+    with pytest.raises(ConditionFailure):
+        Test.s.value = -3
 
+    # Change to an invalid value doesn't work
+    test = Test()
+    with pytest.raises(ConditionFailure):
+        test.s = -3
 
-def test_config_update_type_matching(config):
-    """Test the config.update method with mismatched types"""
-    config.a = Setting(1)
-    config.nested.b = Setting(2, allowed_types=(int, str))
-    config.c = Setting(None, allowed_types=(int, None))
 
-    # Can't change the value of 'a'
-    with pytest.raises(ValueError):
-        config.update({"a": "new value", "c": None})
+def test_settings_manager_new(settings: SettingsManager) -> None:
+    """Test the SettingsManager __new__ method and singleton behavior"""
+    assert id(SettingsManager()) == id(settings)  # same object
+    assert id(SettingsManager(base=False)) != id(settings)  # different object
 
-    # Can change the value of 'nested.b' to a int or string
-    config.update({"nested": {"b": "my new string"}})
-    assert config.nested.b == "my new string"
 
+def test_settings_manager_iter(settings_set1: SettingsManager) -> None:
+    """Test the SettingsManager __iter__ and __len__ methods"""
+    settings = settings_set1
 
-def test_config_update_missing(config):
-    """Test the config.update method for a missing setting, which shouldn't be
-    inserted"""
-    with pytest.raises(KeyError):
-        config.update({"new_value": "2"})
+    assert len(settings) == 2
+    assert settings.conftest in settings  # type: ignore
+    assert settings.database_ip in settings  # type: ignore
 
+    conftest = settings.conftest
 
-def test_config_dump(config):
-    """Test the config.dump method for converting into a dict tree"""
+    assert len(conftest) == 1  # type: ignore
+    assert conftest.TestClass in conftest  # type: ignore
 
-    # Set up the config
-    class Obj:
-        a = Setting(1)
+    TestClass = conftest.TestClass  # type: ignore
 
-    config.b = Setting("name")
-    config.nested.c = Setting(True)
+    assert len(TestClass) == 2  # type: ignore
+    assert TestClass.attribute in TestClass
+    assert TestClass.attribute2 in TestClass
 
-    # Dump and test the contents
-    d = config.dump()
 
-    assert isinstance(d, dict)
-    assert d.keys() == {"Obj", "b", "nested"}
+def test_settings_manager_set(settings: SettingsManager) -> None:
+    """Test the SettingsManager __set__ method"""
 
-    assert isinstance(d["Obj"], dict)
-    assert d["Obj"].keys() == {"a"}
-    assert d["Obj"]["a"] == 1
+    # Setting a new setting is allowed
+    class TestClass:
+        attribute = Setting(5, "a setting")
 
-    assert d["b"] == "name"
+    module_name = TestClass.__module__
+    module_settings = getattr(settings, module_name)
+    assert module_settings.TestClass.attribute.value == 5
 
-    assert isinstance(d["nested"], dict)
-    assert d["nested"].keys() == {"c"}
-    assert isinstance(d["nested"]["c"], bool)
-    assert d["nested"]["c"]
+    # 1. Setting a new setting on a class is not allowed
+    with pytest.raises(SettingException):
 
+        class TestClass:  # type: ignore
+            attribute = Setting("new value", "a new value")
 
-@pytest.mark.parametrize("mode", ("string", "file"))
-def test_config_loads_yaml(config, mode, tmp_path):
-    """Test the config.loads_yaml and config.load_yaml methods for loading yaml
-    strings"""
-    # Set up a config
-    config.a = Setting(1)
+    # 2. Setting a new setting on the setting manager is not allowed
+    with pytest.raises(SettingException):
+        module_settings.TestClass.attribute = Setting("new value", "a new valuel")
 
-    # Load and replace the value
-    config.loads_yaml("a: 2")
+    # 3. Changing a sub-manager to a setting is not allowed
+    with pytest.raises(SettingException):
+        module_settings.TestClass = Setting("new value", "a new valuel")
 
-    # Test loading of new value
-    yaml_string = "a: 2"
-    if mode == "string":
-        config.loads_yaml(yaml_string)
-    elif mode == "file":
-        tmp_file = tmp_path / "settings.yaml"
-        tmp_file.write_text(yaml_string)
-        config.load_yaml(tmp_file)
 
-    assert config.a == 2
+def test_settings_manager_get(settings: SettingsManager) -> None:
+    """Test the SettingsManager __getattribute__ method."""
+    # Retrieve any attribute returns an empty setting
+    sub_manager = settings.sub
+    assert isinstance(sub_manager, SettingsManager)
+    assert len(sub_manager) == 0
 
+    # This sub-manager can be replaced as long as it's empty
+    settings.sub = Setting(5, "A setting")
 
-@pytest.mark.parametrize("value", (1, "a", True, (1,), (1, 2, 3), None))
-def test_config_dumps_yaml(config, value):
-    """Test the config.dumps_yaml method for generating yaml strings"""
+    # Replacing a sub-manager with a setting is not allowed
+    sub_manager2 = settings.sub2
+    sub_manager2.setting = Setting(5, "A setting")  # type: ignore
 
-    # Setup a config
-    class Obj:
-        a = Setting(value)
+    with pytest.raises(SettingException):
+        settings.sub2 = Setting("new", "a new setting")
 
-    config.b = Setting("name", desc="The 'b' setting")
-    config.nested.c = Setting(True)
 
-    # Retrieve and compare the yaml string
-    yaml = config.dumps_yaml()
-    print(yaml)
-    # The string can be loaded back without exception
-    config.loads_yaml(yaml)
+def test_settings_manager_hierarchy(settings_set1: SettingsManager) -> None:
+    """Test the proper construction of the settings manager hierarchy"""
+    settings = settings_set1
 
-    # Check the loaded value
-    assert Obj.a == value
+    assert isinstance(settings, SettingsManager)
+    assert isinstance(settings.conftest, SettingsManager)
+    assert isinstance(settings.conftest.TestClass, SettingsManager)
+    assert isinstance(settings.conftest.TestClass.attribute, Setting)
+    assert isinstance(settings.conftest.TestClass.attribute2, Setting)
+    assert isinstance(settings.database_ip, Setting)
 
 
-@pytest.mark.parametrize("mode", ("string", "file"))
-def test_config_loads_toml(config, mode, tmp_path):
-    """Test the config.loads_toml and config.load_toml methods for loading
-    toml strings"""
+def test_settings_manager_hiearchy_parent(settings_set1: SettingsManager) -> None:
+    """Test the proper setting of the SettingsHierarchy parent property"""
+    settings = settings_set1
 
-    # Setup a config
-    class Obj:
-        a = Setting(1)
+    assert settings.parent is None
+    assert settings.conftest.parent == settings
+    assert settings.conftest.TestClass.parent == settings.conftest  # type: ignore
+    assert settings.conftest.TestClass.attribute.parent == settings.conftest.TestClass  # type: ignore
+    assert settings.conftest.TestClass.attribute2.parent == settings.conftest.TestClass  # type: ignore
+    assert settings.database_ip.parent == settings
 
-    # Test loading of new value
-    toml_string = "[Obj]\na = 2"
-    if mode == "string":
-        config.loads_toml(toml_string)
-    elif mode == "file":
-        tmp_file = tmp_path / "settings.toml"
-        tmp_file.write_text(toml_string)
-        config.load_toml(tmp_file)
 
-    assert Obj.a == 2
+def test_settings_manager_hierarchy_name(settings_set1: SettingsManager) -> None:
+    """Test the SettingsHierarchy name property"""
+    settings = settings_set1
 
-
-@pytest.mark.parametrize("value", (1, "a", True, (1,), (1, 2, 3), None))
-def test_config_dumps_toml(config, value):
-    """Test the config.dumps_toml method for generating toml strings"""
-
-    # Setup a config
-    class Obj:
-        a = Setting(value)
-
-    # Retrieve and compare the yaml string
-    toml = config.dumps_toml()
-
-    # The string can be loaded back without exception
-    config.loads_toml(toml)
-
-    # Check the loaded value
-    assert Obj.a == value
+    assert settings.conftest.TestClass.name == "TestClass"  # type: ignore
+    assert settings.conftest.TestClass.attribute.name == "attribute"  # type: ignore
+    assert settings.conftest.TestClass.attribute2.name == "attribute2"  # type: ignore
+    assert settings.database_ip.name == "database_ip"

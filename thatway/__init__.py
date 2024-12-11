@@ -1,8 +1,7 @@
-from .base import Config, Setting, ConfigException
+from .base import *
+from .io import *
+from .utils import *
 
-__all__ = (Config, Setting, ConfigException)
+settings = SettingsManager()
 
-# Config singleton instance
-config = Config()
-
-__version__ = (0, 6, 1)
+__version__ = "1.0.0"

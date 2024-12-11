@@ -1,85 +1,235 @@
-"""An instance-wide configuration"""
-import typing as t
+from __future__ import annotations
+
+import copy
+import inspect
 from threading import Lock
-from collections.abc import Mapping
-import logging
+from types import SimpleNamespace
+from typing import Any, Callable, ClassVar, Generic, Iterator, TypeVar, cast, overload
+from weakref import ReferenceType, ref
 
-import yaml
-import tomllib
+from .conditions import SupportsRichComparison
 
-__all__ = ("ConfigException", "Config", "Setting")
+__all__ = (
+    "SettingException",
+    "ConditionFailure",
+    "Setting",
+    "SettingsManager",
+)
 
-logger = logging.getLogger(__name__)
+# Definitions and Base Classes
+
+Value = TypeVar("Value")
+Instance = TypeVar("Instance")
 
 
-class ConfigException(Exception):
-    """An exception raised in validating or modifying the config"""
+# Exceptions
 
 
-# dummy placeholder object
-missing = object()
+class SettingException(Exception):
+    """An exception raised from setting, changing or retrieving a setting"""
 
 
-class Setting:
-    """A descriptor for a Config setting."""
+class ConditionFailure(SettingException):
+    """An exception raised when a condition validation fails"""
 
-    __slots__ = ("value", "desc", "allowed_types")
 
-    #: The value for the setting
-    value: t.Any
+# Class definitions
 
-    #: (optional) The description for this setting
+
+class HierarchyMixin:
+
+    #: A weak reference to the parent settings manager that owns this object
+    _parent: ReferenceType[SettingsManager]
+
+    @property
+    def parent(self) -> SettingsManager | None:
+        weakref = self.__dict__.get("_parent", None)
+        return weakref() if weakref is not None else None
+
+    @parent.setter
+    def parent(self, value: SettingsManager) -> None:
+        assert isinstance(value, SettingsManager)
+        self.__dict__["_parent"] = ref(value)
+
+    @property
+    def name(self) -> str:
+        """The given name of this object from the parent"""
+        parent = self.parent
+        if parent is None:
+            return ""
+
+        # Find this object in the parent's dict
+        for name, obj in parent.__dict__.items():
+            if id(obj) == id(self):
+                return name
+
+        # Oops, name not found!
+        raise AttributeError(f"Name for {self} not found.")
+
+    @property
+    def full_name(self) -> str:
+        """The full name, including parents, grandparents, etc. These are separated by
+        a '.'"""
+        names: list[str] = [self.name]
+        parent = self.parent
+
+        while parent is not None:
+            names.append(parent.name)
+
+        return ".".join(names[::-1])
+
+
+class Setting(Generic[Value], HierarchyMixin):
+    """A validated setting"""
+
+    #: The descriptor value for the setting. Accessed and set first.
+    _value: Value
+
+    #: The setting description
     desc: str
 
-    #: (optional) A tuple of allowed types for the values
-    allowed_types: t.Tuple[t.Any]
+    #: A listing of conditions (functions) for allowed values or a listing of allowed
+    #: values
+    conditions: tuple[Callable[[Value | SupportsRichComparison], bool], ...]
 
-    #: The delimiter used for splitting keys
-    delim: str = "."
+    #: The location (filename, line no) in which the setting was created
+    __location__: tuple[str, int]
+
+    #: Setting attribute name for the instance of the class that owns this descriptor
+    _setting_attribute: ClassVar[str] = "__instance_settings__"
 
     def __init__(
         self,
-        value: t.Any,
-        desc: str = "",
-        allowed_types: t.Optional[t.Tuple[t.Any, ...]] = None,
-    ):
-        # Allow only immutable values for settings
-        if not self._is_mutable(value):
-            raise ConfigException(f"Setting value '{value}' must be immutable")
-        self.value = value
-        self.desc = desc
-        self.allowed_types = allowed_types
+        value: Value,
+        *opts: str | Callable[[Value | SupportsRichComparison], bool],
+    ) -> None:
+        """Construct a Setting instance.
 
-    def __set_name__(self, owner, name):
-        cls_name = owner.__name__
-        location = f"{cls_name}.{name}"
-        self._config_insert(location)
+        Parameters
+        ----------
+        value
+            The default value to use for the setting. This may be overwritten by
+            the base SettingsManager or from the class instance
+        *opts
+            Optional arguments to modify the setting's behavior
 
-    def __repr__(self):
-        return f"Param({self.value})"
 
-    def __get__(self, instance, owner):
-        """Get the setting value"""
+            - desc (str). The string description of the setting.
+
+            - conditions (callable). A listing of functions that take a setting value
+              and checks whether it's valid for this setting
+        """
+        # Parse the opts
+        str_opts = tuple(o for o in opts if isinstance(o, str))
+        callable_opts = tuple(o for o in opts if callable(o))
+
+        # Assign the description from the kwarg first, then from the (*opts)
+        self.desc = str_opts[0] if str_opts else ""
+        self.conditions = callable_opts
+        self.value = cast(Value, value)  # After the conditions are set to validate
+
+        # Add meta information on where this object was instantiated
+        stack_trace = inspect.stack()
+        self.__location__ = (stack_trace[1][1], stack_trace[1][2])
+
+    def __repr__(self) -> str:
+        name = getattr(self, "name", "")
+        value = getattr(self, "value", "")
+        return f"Setting({name}={value})"
+
+    def __set_name__(self, cls: type[Instance], name: str) -> None:
+        """Called during descriptor creation on class creation with the given
+        attribute (name)
+        """
+        # Construct or determine the location
+        location = cls.__module__.split(".") + [cls.__name__, name]
+
+        # Insert this descriptor in the settings
+        self._insert(*location)
+
+    @overload
+    def __get__(
+        self, obj: None, objtype: None | type[Instance]
+    ) -> "Setting[Value]": ...
+
+    @overload
+    def __get__(self, obj: Instance, objtype: type[Instance]) -> Value: ...
+
+    def __get__(
+        self, obj: Instance | None, objtype: type[Instance] | None = None
+    ) -> "Setting[Value]" | Value:
+        """Retrieve the setting or instance value.
+
+        Parameters
+        ----------
+        obj
+            If not None, the instance accessing the descriptor.
+            If None, this function is being called by the class owning the descriptor.
+        objtype
+            The type of the class calling the descriptor
+
+        Returns
+        -------
+        (called from a class)
+        Return the descriptor (self)
+
+        (Called from an object/instance)
+        1. The value set on the instance, if available.
+        2. The setting value in the global settings manager.
+        3. The class's default value of the setting.
+        """
+        # Call from the class
+        if obj is None:
+            return self
+
+        # 1. Try getting the custom value from the instance
+        instance_settings = self._instance_settings(obj)
+        if self.name in instance_settings:
+            return instance_settings[self.name]
+
+        # 2. Try the global settings manager
+        manager_setting = self._manager_setting()
+        if manager_setting is not None:
+            return manager_setting.value
+
+        # 3. Return the default value
         return self.value
 
-    def __set__(self, instance, value):
-        raise ConfigException(
-            f"Can't set Setting attribute with "
-            f"value '{value}'--use the Config.update or load "
-            f"methods."
-        )
+    def __set__(self, obj: Instance, value: Value) -> None:
+        # Validate the value
+        self.validate(value)
+
+        # Change the setting
+        instance_settings = Setting._instance_settings(obj)
+        instance_settings[self.name] = cast(Value, value)
+
+    def __delete__(self, obj: Instance) -> None:
+        instance_settings = self._instance_settings(obj)
+        if self.name not in instance_settings:
+            raise AttributeError(self.name)
+        del instance_settings[self.name]
+
+    @property
+    def value(self) -> Value:
+        return self._value
+
+    @value.setter
+    def value(self, v: Value) -> None:
+        self._value = v
+        self.validate(v)
 
     @staticmethod
-    def _is_mutable(value: t.Any) -> bool:
-        """Test whether a value is mutable"""
-        try:
-            hash(value)
-            return True
-        except TypeError:
-            return False
+    def manager() -> SettingsManager:
+        """Retrieve the global settings manager"""
+        return SettingsManager()
 
-    def _config_insert(self, location: str):
-        """Insert this setting in the config at the given location.
+    @classmethod
+    def _instance_settings(cls, obj: Instance) -> dict:
+        """Retrieve the settings for the descriptor's owner instance"""
+        return obj.__dict__.setdefault(cls._setting_attribute, dict())
+
+    def _insert(self, *keys: str) -> None:
+        """Insert this setting at the given location.
 
         Settings
         ----------
@@ -88,323 +238,167 @@ class Setting:
 
         Raises
         ------
-        ConfigException
+        SettingException
             Raised if trying to insert this setting by something else already
-            exists at that location in the config.
+            exists at that location in the settings.
         """
-        keys = location.split(self.delim)
-
-        # Got through each key to get sub configs deeper in the nested tree
-        sub_config = Config()
+        # Got through each key to access the corresponding namespace
+        manager = self.manager()
         for key in keys[:-1]:
-            sub_config = getattr(sub_config, key)
+            manager = getattr(manager, key)
 
-        # The last key is where this setting should be inserted.
-        last_key = keys[-1]
-        if last_key not in sub_config.__dict__:
-            # If it's not inserted already, place it in there.
-            sub_config.__dict__[last_key] = self
-        elif id(sub_config.__dict__[last_key]) != id(self):
-            # Oops, another object's in that place! There's a setting collision
-            other_value = sub_config.__dict__[last_key]
-            raise ConfigException(
-                f"Cannot insert '{self}' at '{location}'. The '{other_value}' "
-                f"already exists there."
-            )
+        # Insert the setting
+        setattr(manager, keys[-1], self)
 
+        # Create a weakref to the newly-created settings manager setting
+        manager_setting = getattr(manager, keys[-1])
+        self._manager_setting = ref(manager_setting)
 
-class ConfigMeta(type):
-    """A metaclass to set up the creation of Config object singleton"""
+    def validate(self, value: Value) -> bool:
+        """Validate the given value and return True (valid) or False (invalid)
 
-    def __call__(cls, root: bool = True, **kwargs):
-        # noinspection PyArgumentList
-        obj = cls.__new__(cls, root=root)
-        obj.__init__(**kwargs)
-        return obj
-
-
-class Config(metaclass=ConfigMeta):
-    """A thread-safe Config manager to get and set configuration settings.
-
-    Notes
-    -----
-    The base class is deliberately modified dynamically with descriptors. This
-    is because the Config was designed to be configured on the fly.
-    """
-
-    #: The root singleton instance
-    _instance: t.Optional["Config"] = None
-
-    #: The thread lock
-    _thread_lock: Lock = Lock()
-
-    def __new__(cls, root: bool = True):
-        # Create the singleton instance if it hasn't been created
-        if cls._instance is None:
-            # Lock the thread
-            with cls._thread_lock:
-                # Prevent another thread from creating the instance in the
-                # interim
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-
-        if not root:
-            # If this is not the root Config--i.e. a sub config--return a
-            # new Config object instead of the root singleton
-            obj = super().__new__(cls)
-            return obj
-        else:
-            # Otherwise return the singleton
-            return cls._instance
-
-    def __init__(self, **kwargs):
-        # Set the specified settings
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-    def __getattribute__(self, key):
-        """Get attributes Config with support for attribute nesting"""
-        try:
-            # The returned value should be a setting or a Config object
-            value = super().__getattribute__(key)
-            return value.value if isinstance(value, Setting) else value
-            # return super().__getattribute__(key)
-        except AttributeError:
-            # Create a dict by default for a missing attribute
-            # This allows nested attribute access
-            self.__dict__[key] = Config(root=False)
-            return super().__getattribute__(key)
-
-    def __setattr__(self, key, value):
-        if key in ("_instance",):
-            # Special keys that can have their values replaced
-            super().__setattr__(key, value)
-        elif hasattr(Config, key):
-            # Class methods cannot be overwritten
-            raise ConfigException(f"Config class method '{key}' cannot be overwritten")
-        elif key not in self.__dict__ and isinstance(value, Setting):
-            # New entries are allowed as long as they are settings
-            self.__dict__[key] = value
-        elif not isinstance(value, Setting):
-            raise ConfigException(f"Only Settings can be inserted in the Config")
-        elif key in self.__dict__:
-            # If it already exists, don't allow a rewrite
-            raise ConfigException(
-                f"Entry '{key}' already in the Config--use a "
-                f"Config.update or load method to change its value."
-            )
-        else:
-            raise ConfigException(f"Unable to chance Config")
-
-    def __contains__(self, item):
-        return item in self.__dict__
-
-    def update(self, updates: Mapping) -> None:
-        """Recursively update config with values from a dict.
-
-        Settings
+        Parameters
         ----------
-        updates
-            The dict with values to recursively update
+        value
+            The value to validate
+
+        Returns
+        -------
+        valid
+            True, if all conditions passed. False (or raised exception) if not.
 
         Raises
         ------
-        ConfigException
-            Raised when the updates include a change that would replace a
-            sub-config (subsection) that includes settings with a single
-            setting.
-        KeyError
-            If a key as specified that doesn't exist in this config
-        ValueError
-            If the update dict contains a  value that has a different
-            type then the corresponding setting's value
+        SettingException
+            Raised if a function is not a function
+        ConditionFailure
+            Raised when a condition fails to validate
         """
-        for k, v in updates.items():
-            try:
-                current_value = self.__dict__[k]
-            except KeyError:
-                raise KeyError(
-                    f"Tried assigning setting with name '{k}' which does "
-                    f"not exist in the Config"
+        valid = True
+
+        # Sort the callable and non-callable validators
+        for c in self.conditions:
+            if not callable(c):
+                raise SettingException(
+                    f"The following condition must be a function: {c}"
                 )
 
-            if isinstance(v, Mapping):
-                # Use the corresponding update function. ex: dict.update
-                current_value.update(v)
-            elif isinstance(v, Config):
-                # If it's a sub-config object, use its corresponding update
-                # (this method)
-                current_value.update(v.__dict__)
-            elif isinstance(current_value, Config) and len(current_value.__dict__) > 0:
-                # In this case, the update value 'v' is a simple value but the
-                # current_value is a sub-config with items in it. Overwriting
-                # This sub-config is not allowed
-                raise ConfigException(
-                    f"Cannot replace config section '{k}' with a setting '{v}'"
-                )
-            elif isinstance(current_value, Setting):
-                # Get the setting value's type and allowed types
-                value_type = (
-                    type(current_value.value)
-                    if current_value.value is not None
-                    else None
-                )
-                allowed_types = current_value.allowed_types
-                types = [] if allowed_types is None else list(allowed_types)
-                types += [value_type]
+            passed = c(value)
 
-                # Replace the setting's value, trying to coerce the type
-                if None in types and (v is None or v == "None"):
-                    # None is special, since it can't be cast
-                    current_value.value = None
-                    continue
+            if not passed:
+                # The condition function's docstring is used to annotate the exception
+                raise ConditionFailure(c.__doc__)
 
-                found_type = False
-                for allowed_type in types:
-                    try:
-                        current_value.value = allowed_type(v)
-                        found_type = True
-                    except ValueError:
-                        continue
+            valid &= passed
 
-                if not found_type:
-                    raise ValueError(
-                        f"Could not convert '{v}' into any of the "
-                        f"following types: {types}"
-                    )
+        return valid
 
+
+class SettingsManager(HierarchyMixin, SimpleNamespace):
+    """The settings namespace manager"""
+
+    #: The settings manager singleton
+    _instance: ClassVar[SettingsManager | None] = None
+
+    #: The thread lock for the singleton
+    _lock: ClassVar[Lock] = Lock()
+
+    def __new__(cls, base: bool = True) -> SettingsManager:
+        """Return a thread-safe SettingsManager singleton"""
+        # If this is not the singleton base settings manager, create a new instance
+        if not base:
+            return super().__new__(cls)
+
+        # Otherwise return the singleton
+        if cls._instance is None:
+            with cls._lock:
+                # Another thread could have created the instance
+                # before we acquired the lock. So check that the
+                # instance is still nonexistent.
+                if not cls._instance:
+                    cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self, level: int = 0, spacer: str = "  ") -> str:
+        name = self.name
+
+        is_root = False if name else True  # Is this the root SettingsManager?
+        next_level = level + 1 if not is_root else level  # Calculate next spacing level
+
+        header = f"{spacer * level}{self.name}\n" if not is_root else ""
+        subitems = []
+
+        for item in self:
+            if isinstance(item, Setting):
+                subitems.append(f"{spacer * next_level}{item.name}={repr(item.value)}")
+            elif isinstance(item, SettingsManager):
+                subitems.append(item.__repr__(next_level, spacer))
             else:
-                raise ConfigException("Setting not in Config")
+                continue
 
-    def dump(self) -> dict:
-        """Convert the config into a tree dict structure"""
-        d = dict()
-        for k, v in self.__dict__.items():
-            if isinstance(v, Setting):
-                d[k] = v.value
-            elif isinstance(v, Config):
-                d[k] = v.dump()  # This method
-            else:
-                raise ConfigException(f"Unknown config type for entry '{v}'")
-        return d
+        return header + "\n".join(subitems)
 
-    # yaml methods
+    def __iter__(self) -> Iterator[Setting | SettingsManager]:
+        """An iterator of the settings and (non-empty) managers owned by this settings
+        manager."""
+        for i in self.__dict__.values():
+            if isinstance(i, Setting) or isinstance(i, SettingsManager) and len(i) > 0:
+                yield i
 
-    @staticmethod
-    def _to_yaml(value, level, indent) -> str:
-        """Convert a value to a string formatted for yaml"""
-        spacer = " " * indent * level
-        if isinstance(value, bool):
-            return str(value).lower()
-        elif isinstance(value, list) or isinstance(value, tuple):
-            return "\n" + "\n".join(f"{spacer}- {i}" for i in value)
-        elif value is None:
-            return "null"
+    def __len__(self) -> int:
+        """The number of settings and (non-empy) managers owned by this settings
+        manager."""
+        return len(list(self.__iter__()))
+
+    def __setattr__(self, name: str, value: Setting | SettingsManager) -> None:
+        """Set a setting in the settings manager namespace."""
+        # See if this is a class attribute or instance attribute
+        cls_attr = getattr(SettingsManager, name, None)
+        obj_attr = getattr(self, name, None)
+
+        # Calculate flags
+        has_cls_property = isinstance(cls_attr, property)  # cls has this as a property
+        has_obj_attr = obj_attr is not None  # instance has attribute
+        is_setting = isinstance(obj_attr, Setting)  # attribute is setting
+        is_submanager = isinstance(obj_attr, SettingsManager)  # attribute is submanager
+        is_empty_submanager = (
+            isinstance(obj_attr, SettingsManager) and len(obj_attr) == 0
+        )
+
+        # If it's a property, set it directly
+        if has_cls_property:
+            return super().__setattr__(name, value)
+
+        # Check that the value is either a Setting or a SettingsManager
+        if not isinstance(value, Setting | SettingsManager):
+            raise AttributeError(
+                f"Cannot insert value of type '{type(value)}' in a SettingsManager."
+            )
+
+        # Only replace missing attributes or empty submanagers
+        if not has_obj_attr or is_empty_submanager:
+            cp = copy.copy(value)  # shallow copy
+            cp.parent = self
+            return super().__setattr__(name, cp)
+
+        # At this stage, the attribute could not be set. Create a customized exception
+        # message
+        if is_setting:
+            msg = f"Attribute '{name}' already exists as a Setting ({obj_attr})"
+        elif is_submanager:
+            msg = f"Attribute '{name}' is an existing setting sub-manager"
         else:
-            return str(value)
+            msg = f"Could not set the setting '{name}'"
 
-    def loads_yaml(self, string: str) -> None:
-        """Load settings from a yaml string into the config"""
-        d = yaml.load(string, Loader=yaml.Loader)
-        self.update(d)
+        raise SettingException(msg)
 
-    def load_yaml(self, filepath: str) -> None:
-        """Load settings from a yaml file into the config"""
-        with open(filepath, "r") as f:
-            d = yaml.load(f, Loader=yaml.Loader)
-        self.update(d)
-
-    def dumps_yaml(self, level: int = 0, indent: int = 2) -> str:
-        """Dump settings from the config into a yaml string
-
-        Parameters
-        ----------
-        level
-            The current level of the config for nested configs
-        indent
-            The number of spaces to indent each level
-
-        Returns
-        -------
-        yaml
-            A yaml-formatted string
-        """
-        string = ""
-        for k, v in self.__dict__.items():
-            spacer = " " * indent * level
-            if isinstance(v, Setting):
-                # Format the setting value and, optionally, its description
-                comment = f"  # {v.desc}" if v.desc else ""
-                value = self._to_yaml(v.value, level=level + 1, indent=indent)
-                string += f"{spacer}{k}: {value}{comment}\n"
-
-            elif isinstance(v, Config):
-                # Print the config as a new section then use the config's corresponding
-                # dump method to get its values
-                string += f"{spacer}{k}:\n"
-                string += v.dumps_yaml(level=level + 1, indent=indent)  # this method
-            else:
-                # Only Config and Setting objects should be in here
-                raise ConfigException(f"Unknown config type for entry '{v}'")
-        return string
-
-    # toml methods
-
-    @staticmethod
-    def _to_toml(value) -> str:
-        """Convert a value to a string formatted for yaml"""
-        if isinstance(value, bool):
-            return str(value).lower()
-        elif isinstance(value, str):
-            return f"'{value}'"
-        elif isinstance(value, list) or isinstance(value, tuple):
-            return f"[{', '.join(map(Config._to_toml, value))}]"
-        elif value is None:
-            return "'None'"
-        else:
-            return str(value)
-
-    def loads_toml(self, string: str) -> None:
-        """Load settings from a toml string into the config"""
-        d = tomllib.loads(string)
-        self.update(d)
-
-    def load_toml(self, filepath: str) -> None:
-        """Load settings from a toml file into the config"""
-        with open(filepath, "rb") as f:
-            d = tomllib.load(f)
-        self.update(d)
-
-    def dumps_toml(self, level: int = 0, indent: int = 2) -> str:
-        """Dump settings from the config into a toml string
-
-        Parameters
-        ----------
-        level
-            The current level of the config for nested configs
-        indent
-            The number of spaces to indent each level
-
-        Returns
-        -------
-        yaml
-            A yaml-formatted string
-        """
-        string = ""
-        for k, v in self.__dict__.items():
-            spacer = " " * indent * level
-            if isinstance(v, Setting):
-                # Format the setting value and, optionally, its description
-                comment = f"  # {v.desc}" if v.desc else ""
-                value = self._to_toml(v.value)
-                string += f"{spacer}{k} = {value}{comment}\n"
-
-            elif isinstance(v, Config):
-                # Print the config as a new section then use the config's corresponding
-                # dump method to get its values
-                string += f"{spacer}[{k}]\n"
-                string += v.dumps_toml(level=level + 1, indent=indent)  # this method
-            else:
-                # Only Config and Setting objects should be in here
-                raise ConfigException(f"Unknown config type for entry '{v}'")
-        return string
+    def __getattribute__(self, name: str) -> Setting | SettingsManager:
+        """Return the setting or a new sub-namespace of settings"""
+        try:
+            return super().__getattribute__(name)
+        except AttributeError:
+            # Create a new sub-manager
+            manager = SettingsManager(base=False)
+            manager.parent = self
+            self.__dict__[name] = manager
+            return super().__getattribute__(name)
